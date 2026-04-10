@@ -1,66 +1,65 @@
 import { Request, Response } from "express";
 import { prisma } from "../../config/prisma";
+import { forgotPasswordSchema } from "../../controllers/auth/auth.schema";
+import jwt from "jsonwebtoken";
 import { sendEmail } from "../../lib/email";
-import crypto from "crypto";
 import { getAppUrl } from "../../lib/geturl";
 
 export default async function forgotPassword(req: Request, res: Response) {
-    // check if email is provided
-    const { email } = req.body as { email?: string };
+  try {
+    const result = forgotPasswordSchema.safeParse(req.body);
 
-    if (!email) {
-        return res.status(400).json({ message: "Email is required" });
+    if (!result.success) {
+      return res.status(400).json({
+        message: "Invalid request",
+      });
     }
 
+    const { email } = result.data;
     const normalizedEmail = email.trim().toLowerCase();
 
-    try {
-        // find user by email
-        const user = await prisma.user.findUnique({
-            where: { email: normalizedEmail },
-        });
+    const user = await prisma.user.findFirst({
+      where: {
+        email: normalizedEmail,
+        deletedAt: null,
+      },
+    });
 
-        if (!user) {
-            return res.status(404).json({ message: "If an account with this email exists, we will send you a reset link" });
-        }
-
-        // generate password reset token
-        const rawToken = crypto.randomBytes(32).toString("hex");
-
-        const tokenHash = crypto
-        .createHash("sha256")
-        .update(rawToken)
-        .digest("hex");
-
-        // save token hash and expiration to user record
-        await prisma.user.update({
-            where: { id: user.id },
-            data: {
-                resetPasswordToken: tokenHash,
-                resetPasswordExpires: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
-            },
-        });
-
-        // response
-        res.status(200).json({ message: "If an account with this email exists, we will send you a reset link" });
-
-        const resetLink = `${getAppUrl()}/password-reset?token=${rawToken}`;
-
-        await sendEmail(
-            user.email,
-            "Password Reset Request",
-            `<p>Hi ${user.name},</p>
-             <p>You requested a password reset. Click the link below to reset your password:</p>
-             <a href="${resetLink}">Reset Password</a>
-             <p>This link will expire in 15 minutes. If you did not request this, please ignore this email.</p>`
-        );
-
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            message: "Internal server error",
-        });
+    // Always return same response
+    if (!user) {
+      return res.status(200).json({
+        message: "If the account exists, a reset link has been sent",
+      });
     }
 
+    const token = jwt.sign(
+      {
+        sub: user.id,
+        type: "password-reset",
+      },
+      process.env.JWT_RESET_SECRET!,
+      { expiresIn: "15m" }
+    );
 
+    const resetLink = `${getAppUrl()}/reset-password?token=${token}`;
+
+    sendEmail(
+      user.email,
+      "Password Reset",
+      `<p>Hi ${user.name},</p>
+       <p>Click the link below to reset your password:</p>
+       <a href="${resetLink}">Reset Password</a>
+       <p>This link expires in 15 minutes.</p>`
+    ).catch(console.error);
+
+    return res.status(200).json({
+      message: "If the account exists, a reset link has been sent",
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
 }
