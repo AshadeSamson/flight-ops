@@ -14,10 +14,10 @@ import {
 const router = Router();
 
 router.get("/profile", requireAuth, asyncHandler(getUserProfileHandler));
-router.post("/", requireAuth, requireRole("ADMIN", "SAFETY_ADMIN"), asyncHandler(createUserHandler));
-router.get("/", requireAuth, requireRole("ADMIN", "SAFETY_ADMIN"), asyncHandler(getAllUsersHandler));
-router.get("/:id", requireAuth, requireRole("ADMIN", "SAFETY_ADMIN"), asyncHandler(getAUserHandler));
-router.patch("/:id", requireAuth, requireRole("ADMIN", "SAFETY_ADMIN"), asyncHandler(updateUserHandler));
+router.post("/", requireAuth, requireRole("ADMIN"), asyncHandler(createUserHandler));
+router.get("/", requireAuth, requireRole("ADMIN"), asyncHandler(getAllUsersHandler));
+router.get("/:id", requireAuth, requireRole("ADMIN"), asyncHandler(getAUserHandler));
+router.patch("/:id", requireAuth, requireRole("ADMIN"), asyncHandler(updateUserHandler));
 
 
 export default router;
