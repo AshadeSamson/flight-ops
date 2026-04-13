@@ -23,9 +23,6 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
             return res.status(404).json({ message: "User does not exist" });
         }
 
-        if (user.tokenVersion !== payload.tokenVersion) {
-            return res.status(401).json({ message: "Unauthorized: Invalid token version" });
-        }
 
         // Attach user info to request object for downstream handlers
         (req as any).user = {
@@ -33,7 +30,6 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
             role: user.role,
             email: user.email,
             name: user.name,
-            isEmailVerified: user.isEmailVerified,
         };
 
 
