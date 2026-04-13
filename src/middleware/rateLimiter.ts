@@ -1,9 +1,14 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator }  from "express-rate-limit";
 
 //  Shared key generator
 const keyGenerator = (req: any) => {
   const user = req.user;
-  return user?.id ? `user:${user.id}` : `ip:${req.ip}`;
+
+  if (user?.id) {
+    return `user:${user.id}`;
+  }
+
+  return `ip:${ipKeyGenerator(req)}`; 
 };
 
 //  Auth limiter
