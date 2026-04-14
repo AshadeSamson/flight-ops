@@ -167,13 +167,13 @@ model DailyFlightSchedule {
   movementType  MovementType
 
   airportCode   String?
-  airportName   String?
+  airportName   String
 
   scheduledTime String
 
   status        String?
 
-  date          String
+  date          DateTime
 
   createdAt     DateTime @default(now())
 

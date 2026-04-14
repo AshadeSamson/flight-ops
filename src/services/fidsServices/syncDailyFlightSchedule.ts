@@ -10,23 +10,22 @@ export default async function syncDailyFlightSchedule() {
       return;
     }
 
-    // 🧠 Get today's date (start of day)
-    const today = new Date();
-    const startOfDay = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate()
-    ).toLocaleString('en-GB', {
-    timeZone: 'Africa/Lagos',
-  });
+    // Get today's date (start of day)
+    // ✅ Lagos-safe "today"
+      const now = new Date();
 
-    const endOfDay = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate() + 1
-    ).toLocaleString('en-GB', {
-    timeZone: 'Africa/Lagos',
-  });
+      const lagosNow = new Date(
+        now.toLocaleString("en-US", { timeZone: "Africa/Lagos" })
+      );
+
+      const startOfDay = new Date(
+        lagosNow.getFullYear(),
+        lagosNow.getMonth(),
+        lagosNow.getDate()
+      );
+
+      const endOfDay = new Date(startOfDay);
+      endOfDay.setDate(endOfDay.getDate() + 1);
     
 
     // 🔴 Step 1: Delete existing records for today
