@@ -2,6 +2,7 @@ import app from "./app";
 import dotenv from "dotenv";
 import { connectToDB } from "./config/db";
 import http from "http";
+import { startFidsSyncJob } from "./jobs/fidsSync.job";
 
 
 dotenv.config();
@@ -10,10 +11,15 @@ const PORT = process.env.PORT || 3000;
 async function startServer() {
 
     await connectToDB()
+
+    startFidsSyncJob();
+
     const server = http.createServer(app);
     server.listen(PORT, () => {
         console.log(`Server is running and now listening on port ${PORT}`);
     });
+
+    
 }
 
 startServer().catch((error) => {

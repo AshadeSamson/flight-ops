@@ -10,12 +10,16 @@ type RawFidsFlight = {
 type NormalizedFlight = {
   flightNumber: string;
   airlineCode: string;
+
   airportName: string;
   airportCode?: string;
-  scheduledTime: string;
-  status?: string | null | undefined;
+
+  scheduledTime: string; 
+  status?: string;
+
   movementType: "ARRIVAL" | "DEPARTURE";
-  date: string;
+
+  date: Date; 
 };
 
 export default function normalizeFidsData(
@@ -24,25 +28,31 @@ export default function normalizeFidsData(
 ): NormalizedFlight[] {
   const allFlights = [...departures, ...arrivals];
 
-  const today = new Date();
+  // ✅ Lagos "today" 
+  const now = new Date();
+
+  const lagosToday = new Date(
+    now.toLocaleString("en-US", { timeZone: "Africa/Lagos" })
+  );
+
+  const startOfDay = new Date(
+    lagosToday.getFullYear(),
+    lagosToday.getMonth(),
+    lagosToday.getDate()
+  );
 
   return allFlights.map((flight) => ({
-  flightNumber: flight.flightNumber.trim(),
-  airlineCode: flight.airlineCode.trim(),
+    flightNumber: flight.flightNumber.trim(),
+    airlineCode: flight.airlineCode.trim(),
 
-  airportName: flight.airport.trim(), // ✅ correct
-  airportCode: undefined, // placeholder
+    airportName: flight.airport.trim(),
+    airportCode: undefined,
 
-  scheduledTime: flight.scheduledTime,
-  status: flight.status || null,
-  movementType: flight.movementType,
+    scheduledTime: flight.scheduledTime, 
 
-  date: new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  ).toLocaleString('en-GB', {
-    timeZone: 'Africa/Lagos',
-  })
-}));
+    status: flight.status || undefined,
+    movementType: flight.movementType,
+
+    date: startOfDay, 
+  }));
 }
