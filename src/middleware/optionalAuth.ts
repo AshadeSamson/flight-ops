@@ -30,10 +30,10 @@ async function optionalAuth(req: Request, res: Response, next: NextFunction) {
             return next();
         }
 
-        if (user.tokenVersion !== payload.tokenVersion) {
-            // Token version mismatch, continue without setting req.user
-            return next();
-        }
+        // if (user.tokenVersion !== payload.tokenVersion) {
+        //     // Token version mismatch, continue without setting req.user
+        //     return next();
+        // }
 
         // Attach user info to request object for downstream handlers
         (req as any).user = {
@@ -41,7 +41,7 @@ async function optionalAuth(req: Request, res: Response, next: NextFunction) {
             role: user.role,
             email: user.email,
             name: user.name,
-            isEmailVerified: user.isEmailVerified,
+            // isEmailVerified: user.isEmailVerified,
         };
 
         next();
