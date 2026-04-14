@@ -1,3 +1,5 @@
+#### API_URL: `https://flight-ops-production.up.railway.app`
+
 # Auth & Users API Documentation
 
 This document covers the authentication and user management endpoints exposed by the backend for frontend integration.
