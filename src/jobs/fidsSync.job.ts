@@ -6,7 +6,7 @@ export function startFidsSyncJob() {
   let isRunning = false;
 
   cron.schedule(
-    "* * * * *", // 3:00 AM
+    "0 3 * * *", // 3:00 AM
     async () => {
           if (isRunning) {
             console.log("Previous job still running, skipping...");
