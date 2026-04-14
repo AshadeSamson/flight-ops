@@ -19,6 +19,22 @@ enum UserRole {
 }
 
 
+
+enum MovementType {
+  ARRIVAL
+  DEPARTURE
+}
+
+
+
+enum OperationStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+}
+
+
+
 model User {
   id            String    @id @default(cuid())
 
@@ -32,8 +48,135 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
-
-  @@index([role])
 }
 
 
+
+model Airline {
+  id        String   @id @default(cuid())
+
+  name      String
+  code      String   @unique
+
+  aircrafts Aircraft[]
+  flights   FlightOperation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+
+model Aircraft {
+  id                 String   @id @default(cuid())
+
+  registrationNumber String   @unique
+  type               String
+  maxCapacity        Int
+
+  airlineId          String
+  airline            Airline  @relation(fields: [airlineId], references: [id])
+
+  flights            FlightOperation[]
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+
+
+model Airport {
+  id        String   @id @default(cuid())
+
+  name      String
+  code      String   @unique
+
+  flights   FlightOperation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+
+model Bay {
+  id        String   @id @default(cuid())
+
+  name      String   @unique
+
+  flights   FlightOperation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+
+model FlightOperation {
+  id              String   @id @default(cuid())
+
+  flightNumber    String
+  date            DateTime
+  movementType    MovementType
+
+  airlineId       String?
+  airline         Airline? @relation(fields: [airlineId], references: [id])
+
+  airlineName     String?
+  airlineCode     String?
+
+  scheduledTime   DateTime?
+
+  airportId       String?
+  airport         Airport? @relation(fields: [airportId], references: [id])
+
+  airportName     String?
+  airportCode     String?
+
+  aircraftId      String?
+  aircraft        Aircraft? @relation(fields: [aircraftId], references: [id])
+
+  aircraftType    String?
+
+  soulsOnBoard    Int?
+  actualTime      DateTime?
+
+  bayId           String?
+  bay             Bay? @relation(fields: [bayId], references: [id])
+
+  status          OperationStatus @default(DRAFT)
+
+  createdById     String
+  updatedById     String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([flightNumber, date, movementType])
+}
+
+
+
+model DailyFlightSchedule {
+  id            String   @id @default(cuid())
+
+  flightNumber  String
+  airlineCode   String?
+  airlineName   String?
+
+  movementType  MovementType
+
+  airportCode   String?
+  airportName   String?
+
+  scheduledTime String
+
+  status        String?
+
+  date          String
+
+  createdAt     DateTime @default(now())
+
+  @@unique([flightNumber, date, movementType])
+  @@index([date])
+}
