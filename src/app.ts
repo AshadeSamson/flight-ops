@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.route';
 import userRoutes from './routes/user.route';
+import flightOperationRoutes from "./routes/flightOperation.route";
 import errorHandler from './middleware/errorHandler';
 import { generalLimiter } from './middleware/rateLimiter';
 
@@ -26,6 +27,7 @@ app.use("/api/v1", (req, res, next) => {
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/flight-operations", flightOperationRoutes);
 
 // Global error handler (should be after routes)
 app.use(errorHandler);
