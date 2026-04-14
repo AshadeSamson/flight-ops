@@ -45,6 +45,8 @@ model User {
   staffId       String    @unique
   role          UserRole
 
+  flightOperations FlightOperation[]
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
@@ -113,48 +115,39 @@ model Bay {
 
 
 model FlightOperation {
-  id              String   @id @default(cuid())
+  id            String   @id @default(cuid())
 
-  flightNumber    String
-  date            DateTime
-  movementType    MovementType
+  flightNumber  String
 
-  airlineId       String?
-  airline         Airline? @relation(fields: [airlineId], references: [id])
+  movementType  MovementType
 
-  airlineName     String?
-  airlineCode     String?
+  airlineId     String?
+  airline       Airline? @relation(fields: [airlineId], references: [id])
 
-  scheduledTime   DateTime?
+  aircraftId    String?
+  aircraft      Aircraft? @relation(fields: [aircraftId], references: [id])
 
-  airportId       String?
-  airport         Airport? @relation(fields: [airportId], references: [id])
+  airportId     String?
+  airport       Airport? @relation(fields: [airportId], references: [id])
 
-  airportName     String?
-  airportCode     String?
+  bayId         String?
+  bay           Bay? @relation(fields: [bayId], references: [id])
 
-  aircraftId      String?
-  aircraft        Aircraft? @relation(fields: [aircraftId], references: [id])
+  soulsOnBoard  Int? // Souls on Board
 
-  aircraftType    String?
+  scheduledTime String // from FIDS or manual
+  actualTime    DateTime? // real recorded time
 
-  soulsOnBoard    Int?
-  actualTime      DateTime?
+  date          DateTime // Lagos day anchor
 
-  bayId           String?
-  bay             Bay? @relation(fields: [bayId], references: [id])
+  createdById   String?
+  createdBy     User? @relation(fields: [createdById], references: [id])
 
-  status          OperationStatus @default(DRAFT)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  createdById     String
-  updatedById     String?
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@unique([flightNumber, date, movementType])
+  @@index([date])
 }
-
 
 
 model DailyFlightSchedule {
