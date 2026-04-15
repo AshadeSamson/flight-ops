@@ -14,13 +14,13 @@ export const createFlightOperationSchema = z.object({
 
   movementType: z.enum(["ARRIVAL", "DEPARTURE"]),
 
-  // Optional relations
-  airlineId: z.string().cuid().optional(),
-  aircraftId: z.string().cuid().optional(),
-  airportId: z.string().cuid().optional(),
-  bayId: z.string().cuid().optional(),
+  // ✅ UI-based inputs (NOT IDs)
+  aircraftReg: z.string().optional(),
+  aircraftType: z.string().optional(),
+  bayName: z.string().optional(),
 
-  sob: z.number().int().positive().optional(),
+  // ✅ Ops data
+  soulsOnBoard: z.number().int().positive().optional(),
 
   scheduledTime: timeStringSchema,
 
@@ -29,19 +29,16 @@ export const createFlightOperationSchema = z.object({
   date: dateSchema,
 });
 
-
-
 export const updateFlightOperationSchema = z.object({
   flightNumber: z.string().min(2).trim().optional(),
 
   movementType: z.enum(["ARRIVAL", "DEPARTURE"]).optional(),
 
-  airlineId: z.string().cuid().optional(),
-  aircraftId: z.string().cuid().optional(),
-  airportId: z.string().cuid().optional(),
-  bayId: z.string().cuid().optional(),
+  aircraftReg: z.string().optional(),
+  aircraftType: z.string().optional(),
+  bayName: z.string().optional(),
 
-  sob: z.number().int().positive().optional(),
+  soulsOnBoard: z.number().int().positive().optional(),
 
   scheduledTime: timeStringSchema.optional(),
 

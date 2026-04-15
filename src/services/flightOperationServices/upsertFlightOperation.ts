@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
 import { prisma } from "../../config/prisma";
-import { createFlightOperationSchema } from "../../controllers/flightOperations/flightOperation.schema";
+import { updateFlightOperationSchema } from "../../controllers/flightOperations/flightOperation.schema";
 
-export default async function createFlightOperation(
+export default async function upsertFlightOperation(
   req: Request,
   res: Response
 ) {
   try {
-    const result = createFlightOperationSchema.safeParse(req.body);
+    const result = updateFlightOperationSchema.safeParse(req.body);
 
     if (!result.success) {
       return res.status(400).json({
@@ -28,6 +28,12 @@ export default async function createFlightOperation(
       date,
     } = result.data;
 
+    if (!flightNumber || !movementType || !date) {
+      return res.status(400).json({
+        message: "flightNumber, movementType and date are required",
+      });
+    }
+
     // 🧠 Normalize Lagos day
     const inputDate = new Date(date);
 
@@ -41,14 +47,27 @@ export default async function createFlightOperation(
       lagosDate.getDate()
     );
 
-    // 🔄 Map Aircraft (reg → id)
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setDate(endOfDay.getDate() + 1);
+
+    // 🔍 Check if operation already exists
+    const existingOperation = await prisma.flightOperation.findFirst({
+      where: {
+        flightNumber,
+        movementType,
+        date: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+      },
+    });
+
+    // 🔄 Map Aircraft
     let aircraftId: string | undefined;
 
     if (aircraftReg) {
       const aircraft = await prisma.aircraft.findFirst({
-        where: {
-          registrationNumber: aircraftReg,
-        },
+        where: { registrationNumber: aircraftReg },
       });
 
       if (!aircraft) {
@@ -60,14 +79,12 @@ export default async function createFlightOperation(
       aircraftId = aircraft.id;
     }
 
-    // 🔄 Map Bay (name → id)
+    // 🔄 Map Bay
     let bayId: string | undefined;
 
     if (bayName) {
       const bay = await prisma.bay.findFirst({
-        where: {
-          name: bayName,
-        },
+        where: { name: bayName },
       });
 
       if (!bay) {
@@ -79,11 +96,29 @@ export default async function createFlightOperation(
       bayId = bay.id;
     }
 
-    // 👤 Get user
     const user = (req as any).user;
 
-    // 🟢 Create record
-    const operation = await prisma.flightOperation.create({
+    // 🟢 CASE 1: UPDATE
+    if (existingOperation) {
+      const updated = await prisma.flightOperation.update({
+        where: { id: existingOperation.id },
+        data: {
+          ...(aircraftId && { aircraftId }),
+          ...(bayId && { bayId }),
+          ...(soulsOnBoard !== undefined && { sob: soulsOnBoard }),
+          ...(scheduledTime && { scheduledTime }),
+          ...(actualTime && { actualTime: new Date(actualTime) }),
+        },
+      });
+
+      return res.status(200).json({
+        message: "Flight operation updated",
+        data: updated,
+      });
+    }
+
+    // 🟢 CASE 2: CREATE
+    const created = await prisma.flightOperation.create({
       data: {
         flightNumber,
         movementType,
@@ -93,18 +128,17 @@ export default async function createFlightOperation(
 
         sob: soulsOnBoard,
 
-        scheduledTime,
+        scheduledTime: scheduledTime!,
         actualTime: actualTime ? new Date(actualTime) : undefined,
 
         date: startOfDay,
-
         createdById: user?.id,
       },
     });
 
     return res.status(201).json({
-      message: "Flight operation created successfully",
-      data: operation,
+      message: "Flight operation created",
+      data: created,
     });
   } catch (error) {
     console.error(error);
