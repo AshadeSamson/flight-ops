@@ -105,6 +105,7 @@ model Bay {
   id        String   @id @default(cuid())
 
   name      String   @unique
+  code      String   @unique
 
   flights   FlightOperation[]
 
