@@ -14,12 +14,19 @@ export async function createFlightOperationHandler(
 }
 
 
-// 🔥 CORE: Daily sheet endpoint
+//  CORE: Daily sheet endpoint
 export async function getDailyOperationsHandler(
   req: Request,
   res: Response
 ) {
-  const { date } = req.query;
+  const {
+    date,
+    page = "1",
+    limit = "20",
+    movementType,
+    airlineCode,
+    search,
+  } = req.query;
 
   if (!date) {
     return res.status(400).json({
@@ -27,16 +34,25 @@ export async function getDailyOperationsHandler(
     });
   }
 
-  const data = await getDailyOperations(date as string);
+  const data = await getDailyOperations(
+    date as string,
+    parseInt(page as string),
+    parseInt(limit as string),
+    {
+      movementType: movementType as "ARRIVAL" | "DEPARTURE",
+      airlineCode: airlineCode as string,
+      search: search as string,
+    }
+  );
 
   return res.status(200).json({
     message: "Daily operations retrieved successfully",
-    data,
+    ...data,
   });
 }
 
 
-// 🔥 CORE: Upsert (table editing)
+//  CORE: Upsert (table editing)
 export async function upsertFlightOperationHandler(
   req: Request,
   res: Response
@@ -45,7 +61,7 @@ export async function upsertFlightOperationHandler(
 }
 
 
-// 🔹 Optional helper
+//  Optional helper
 export async function getFlightFromScheduleHandler(
   req: Request,
   res: Response

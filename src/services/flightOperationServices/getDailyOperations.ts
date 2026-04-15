@@ -1,7 +1,15 @@
 import { prisma } from "../../config/prisma";
 
-export default async function getDailyOperations(date: string) {
-  // 🧠 Normalize Lagos date
+export default async function getDailyOperations(
+  date: string,
+  page: number = 1,
+  limit: number = 20,
+  filters?: {
+    movementType?: "ARRIVAL" | "DEPARTURE";
+    airlineCode?: string;
+    search?: string;
+  }
+) {
   const inputDate = new Date(date);
 
   const lagosDate = new Date(
@@ -17,20 +25,55 @@ export default async function getDailyOperations(date: string) {
   const endOfDay = new Date(startOfDay);
   endOfDay.setDate(endOfDay.getDate() + 1);
 
-  // 🟢 1. Fetch schedule
-  const schedules = await prisma.dailyFlightSchedule.findMany({
-    where: {
-      date: {
-        gte: startOfDay,
-        lt: endOfDay,
-      },
+  const skip = (page - 1) * limit;
+
+  // 🧠 Build WHERE condition dynamically
+  const where: any = {
+    date: {
+      gte: startOfDay,
+      lt: endOfDay,
     },
+  };
+
+  if (filters?.movementType) {
+    where.movementType = filters.movementType;
+  }
+
+  if (filters?.airlineCode) {
+    where.airlineCode = filters.airlineCode;
+  }
+
+  if (filters?.search) {
+    where.OR = [
+      {
+        flightNumber: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
+      {
+        airportName: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
+    ];
+  }
+
+  // 🟢 Total count
+  const total = await prisma.dailyFlightSchedule.count({ where });
+
+  // 🟢 Paginated schedules
+  const schedules = await prisma.dailyFlightSchedule.findMany({
+    where,
     orderBy: {
       scheduledTime: "asc",
     },
+    skip,
+    take: limit,
   });
 
-  // 🟢 2. Fetch operations WITH relations
+  // 🟢 Fetch operations
   const operations = await prisma.flightOperation.findMany({
     where: {
       date: {
@@ -44,7 +87,7 @@ export default async function getDailyOperations(date: string) {
     },
   });
 
-  // 🧠 3. Merge
+  // 🧠 Merge
   const merged = schedules.map((flight) => {
     const operation = operations.find(
       (op) =>
@@ -53,7 +96,6 @@ export default async function getDailyOperations(date: string) {
     );
 
     return {
-      // 🔹 Schedule data
       scheduleId: flight.id,
       flightNumber: flight.flightNumber,
       airlineCode: flight.airlineCode,
@@ -61,7 +103,6 @@ export default async function getDailyOperations(date: string) {
       scheduledTime: flight.scheduledTime,
       movementType: flight.movementType,
 
-      // 🔹 Operation data (UI-friendly)
       operationId: operation?.id || null,
       soulsOnBoard: operation?.soulsOnBoard || null,
       actualTime: operation?.actualTime || null,
@@ -73,5 +114,13 @@ export default async function getDailyOperations(date: string) {
     };
   });
 
-  return merged;
+  return {
+    data: merged,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 }
