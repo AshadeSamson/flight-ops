@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { prisma } from "../../config/prisma";
 import { updateFlightOperationSchema } from "../../controllers/flightOperations/flightOperation.schema";
+import {
+  buildScheduledDateTime,
+  calculateDelayMinutes,
+  getDelayStatus,
+} from "../../utils/flightMetrics";
 
 export default async function upsertFlightOperation(
   req: Request,
@@ -20,7 +25,6 @@ export default async function upsertFlightOperation(
       flightNumber,
       movementType,
       aircraftReg,
-      aircraftType,
       bayName,
       soulsOnBoard,
       scheduledTime,
@@ -46,21 +50,6 @@ export default async function upsertFlightOperation(
       lagosDate.getMonth(),
       lagosDate.getDate()
     );
-
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(endOfDay.getDate() + 1);
-
-    // 🔍 Check if operation already exists
-    const existingOperation = await prisma.flightOperation.findFirst({
-      where: {
-        flightNumber,
-        movementType,
-        date: {
-          gte: startOfDay,
-          lt: endOfDay,
-        },
-      },
-    });
 
     // 🔄 Map Aircraft
     let aircraftId: string | undefined;
@@ -96,49 +85,68 @@ export default async function upsertFlightOperation(
       bayId = bay.id;
     }
 
+    // 👤 Get user
     const user = (req as any).user;
 
-    // 🟢 CASE 1: UPDATE
-    if (existingOperation) {
-      const updated = await prisma.flightOperation.update({
-        where: { id: existingOperation.id },
-        data: {
-          ...(aircraftId && { aircraftId }),
-          ...(bayId && { bayId }),
-          ...(soulsOnBoard !== undefined && { sob: soulsOnBoard }),
-          ...(scheduledTime && { scheduledTime }),
-          ...(actualTime && { actualTime: new Date(actualTime) }),
-        },
-      });
+    // 🧠 Build scheduled datetime (only if scheduledTime exists)
+    let delayMinutes: number | null = null;
+    let delayStatus: string | null = null;
 
-      return res.status(200).json({
-        message: "Flight operation updated",
-        data: updated,
-      });
+    if (scheduledTime) {
+      const scheduledDateTime = buildScheduledDateTime(
+        startOfDay,
+        scheduledTime
+      );
+
+      delayMinutes = calculateDelayMinutes(
+        scheduledDateTime,
+        actualTime ? new Date(actualTime) : undefined
+      );
+
+      delayStatus = getDelayStatus(delayMinutes);
     }
 
-    // 🟢 CASE 2: CREATE
-    const created = await prisma.flightOperation.create({
-      data: {
+    // 🔥 TRUE UPSERT (atomic)
+    const operation = await prisma.flightOperation.upsert({
+      where: {
+        flightNumber_date_movementType: {
+          flightNumber,
+          date: startOfDay,
+          movementType,
+        },
+      },
+      update: {
+        ...(aircraftId && { aircraftId }),
+        ...(bayId && { bayId }),
+        ...(soulsOnBoard !== undefined && { soulsOnBoard }),
+        ...(scheduledTime && { scheduledTime }),
+        ...(actualTime && { actualTime: new Date(actualTime) }),
+
+        delayMinutes,
+        delayStatus,
+      },
+      create: {
         flightNumber,
         movementType,
+        date: startOfDay,
 
         aircraftId,
         bayId,
-
-        sob: soulsOnBoard,
+        soulsOnBoard,
 
         scheduledTime: scheduledTime!,
         actualTime: actualTime ? new Date(actualTime) : undefined,
 
-        date: startOfDay,
+        delayMinutes,
+        delayStatus,
+
         createdById: user?.id,
       },
     });
 
-    return res.status(201).json({
-      message: "Flight operation created",
-      data: created,
+    return res.status(200).json({
+      message: "Flight operation upserted successfully",
+      data: operation,
     });
   } catch (error) {
     console.error(error);

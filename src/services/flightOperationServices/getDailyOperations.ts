@@ -1,4 +1,5 @@
 import { prisma } from "../../config/prisma";
+import { buildScheduledDateTime, calculateDelayMinutes, getDelayStatus} from "../../utils/flightMetrics";
 
 export default async function getDailyOperations(
   date: string,
@@ -8,7 +9,8 @@ export default async function getDailyOperations(
     movementType?: "ARRIVAL" | "DEPARTURE";
     airlineCode?: string;
     search?: string;
-  }
+    status?: "ON_TIME" | "MINOR_DELAY" | "DELAYED" | "PENDING";
+}
 ) {
   const inputDate = new Date(date);
 
@@ -60,6 +62,10 @@ export default async function getDailyOperations(
     ];
   }
 
+  if (filters?.status) {
+    filters.status = filters.status.toUpperCase() as any;
+  }
+
   // 🟢 Total count
   const total = await prisma.dailyFlightSchedule.count({ where });
 
@@ -94,6 +100,18 @@ export default async function getDailyOperations(
         op.flightNumber === flight.flightNumber &&
         op.movementType === flight.movementType
     );
+  
+    const scheduledDateTime = buildScheduledDateTime(
+      startOfDay,
+      flight.scheduledTime
+    );
+
+    const delayMinutes = calculateDelayMinutes(
+      scheduledDateTime,
+      operation?.actualTime
+    );
+
+    const delayStatus = getDelayStatus(delayMinutes);
 
     return {
       scheduleId: flight.id,
@@ -111,11 +129,20 @@ export default async function getDailyOperations(
       aircraftType: operation?.aircraft?.type || null,
 
       bayName: operation?.bay?.name || null,
+
+      delayMinutes: operation?.delayMinutes ?? null,
+      delayStatus: operation?.delayStatus ?? "PENDING",
     };
   });
 
+  const filteredData = filters?.status
+  ? merged.filter((f) => f.delayStatus === filters.status)
+  : merged;
+
+  const paginated = filteredData.slice(skip, skip + limit);
+
   return {
-    data: merged,
+    data: paginated,
     meta: {
       total,
       page,

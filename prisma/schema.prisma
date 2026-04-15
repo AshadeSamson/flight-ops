@@ -139,6 +139,9 @@ model FlightOperation {
   scheduledTime String // from FIDS or manual
   actualTime    DateTime? // real recorded time
 
+  delayMinutes  Int?
+  delayStatus   String?
+
   date          DateTime // Lagos day anchor
 
   createdById   String?
@@ -147,7 +150,7 @@ model FlightOperation {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  @@index([date])
+  @@unique([flightNumber, date, movementType])
 }
 
 

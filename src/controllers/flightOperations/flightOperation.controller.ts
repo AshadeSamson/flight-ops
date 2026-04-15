@@ -26,13 +26,8 @@ export async function getDailyOperationsHandler(
     movementType,
     airlineCode,
     search,
+    status,
   } = req.query;
-
-  if (!date) {
-    return res.status(400).json({
-      message: "date is required",
-    });
-  }
 
   const data = await getDailyOperations(
     date as string,
@@ -42,6 +37,7 @@ export async function getDailyOperationsHandler(
       movementType: movementType as "ARRIVAL" | "DEPARTURE",
       airlineCode: airlineCode as string,
       search: search as string,
+      status: status as any,
     }
   );
 
