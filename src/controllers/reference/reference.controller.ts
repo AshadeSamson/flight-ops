@@ -12,6 +12,9 @@ import deleteAircraft from "../../services/referenceServices/deleteAircraft";
 import createBay from "../../services/referenceServices/createBay";
 import updateBay from "../../services/referenceServices/updateBay";
 import deleteBay from "../../services/referenceServices/deleteBay";
+import createAirport from "../../services/referenceServices/createAirport";
+import updateAirport from "../../services/referenceServices/updateAirport";
+import deleteAirport from "../../services/referenceServices/deleteAirport";
 
 
 export async function getAircraftsHandler(req: Request, res: Response) {
@@ -163,5 +166,44 @@ export async function deleteBayHandler(
 
   return res.status(200).json({
     message: "Bay deleted successfully",
+  });
+}
+
+
+export async function createAirportHandler(
+  req: Request,
+  res: Response
+) {
+  const data = await createAirport(req.body);
+
+  return res.status(201).json({
+    message: "Airport created successfully",
+    data,
+  });
+}
+
+export async function updateAirportHandler(
+  req: Request,
+  res: Response
+) {
+  const data = await updateAirport(
+    String(req.params.id),
+    req.body
+  );
+
+  return res.status(200).json({
+    message: "Airport updated successfully",
+    data,
+  });
+}
+
+export async function deleteAirportHandler(
+  req: Request,
+  res: Response
+) {
+  await deleteAirport(String(req.params.id));
+
+  return res.status(200).json({
+    message: "Airport deleted successfully",
   });
 }
