@@ -16,3 +16,12 @@ export async function forgotPasswordHandler(req: Request, res: Response) {
 export async function resetPasswordHandler(req: Request, res: Response) {
     await resetPassword(req, res);
 }
+
+export async function getMeHandler(req: Request, res: Response) {
+  const user = (req as any).user;
+
+  return res.status(200).json({
+    message: "Current user retrieved successfully",
+    data: user,
+  });
+}
