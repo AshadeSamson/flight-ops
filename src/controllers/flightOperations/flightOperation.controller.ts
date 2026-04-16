@@ -22,25 +22,25 @@ export async function getDailyOperationsHandler(
   const {
     date,
     page = "1",
-    limit = "20",
     movementType,
     airlineCode,
     search,
     status,
   } = req.query;
 
-  if (!date || isNaN(new Date(date as string).getTime())) {
+  if (!date) {
     return res.status(400).json({
-      message: "Valid date is required",
+      message: "date is required",
     });
   }
 
   const data = await getDailyOperations(
-    date as string,
-    parseInt(page as string),
-    parseInt(limit as string),
+    String(date),
+    Number(page),
+    20, // ✅ frontend only needs to send page
     {
-      movementType: movementType as "ARRIVAL" | "DEPARTURE",
+      movementType:
+        movementType as "ARRIVAL" | "DEPARTURE",
       airlineCode: airlineCode as string,
       search: search as string,
       status: status as any,

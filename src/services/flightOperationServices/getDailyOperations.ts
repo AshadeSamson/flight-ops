@@ -16,28 +16,41 @@ export default async function getDailyOperations(
     status?: "ON_TIME" | "MINOR_DELAY" | "DELAYED" | "PENDING";
   }
 ) {
-  if (!date) {
-    throw new Error("Invalid or missing date");
+  // ✅ Clean incoming values
+  const cleanDate = String(date).trim();
+
+  if (!cleanDate) {
+    throw new Error("Date is required");
   }
 
-  // ✅ Expecting YYYY-MM-DD
-  const [year, month, day] = date.split("-").map(Number);
+  // ✅ Strict YYYY-MM-DD validation
+  const dateMatch = cleanDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
-  if (!year || !month || !day) {
+  if (!dateMatch) {
     throw new Error("Invalid date format. Use YYYY-MM-DD");
   }
 
-  // ✅ Lagos midnight converted to UTC
+  const year = Number(dateMatch[1]);
+  const month = Number(dateMatch[2]);
+  const day = Number(dateMatch[3]);
+
+  // ✅ Safe pagination defaults
+  page = Number(page) || 1;
+  limit = Number(limit) || 20;
+
+  if (page < 1) page = 1;
+  if (limit < 1) limit = 20;
+
+  const skip = (page - 1) * limit;
+
+  // ✅ Lagos operational day stored as UTC equivalent
   const startOfDay = new Date(
     Date.UTC(year, month - 1, day, -1, 0, 0)
   );
 
-  // ✅ Next Lagos midnight converted to UTC
   const endOfDay = new Date(
     Date.UTC(year, month - 1, day + 1, -1, 0, 0)
   );
-
-  const skip = (page - 1) * limit;
 
   const where: any = {
     date: {
@@ -71,6 +84,7 @@ export default async function getDailyOperations(
     ];
   }
 
+  // ✅ Fetch schedules first (full set for accurate filtering)
   const schedules = await prisma.dailyFlightSchedule.findMany({
     where,
     orderBy: {
@@ -128,7 +142,8 @@ export default async function getDailyOperations(
 
       aircraftReg:
         operation?.aircraft?.registrationNumber || null,
-      aircraftType: operation?.aircraft?.type || null,
+      aircraftType:
+        operation?.aircraft?.type || null,
 
       bayName: operation?.bay?.name || null,
 
@@ -137,15 +152,18 @@ export default async function getDailyOperations(
     };
   });
 
+  // ✅ Status filtering
   const filteredData = filters?.status
     ? merged.filter(
         (row) =>
           row.delayStatus ===
-          filters.status?.toUpperCase()
+          String(filters.status).toUpperCase()
       )
     : merged;
 
   const total = filteredData.length;
+  const totalPages =
+    total === 0 ? 1 : Math.ceil(total / limit);
 
   const paginated = filteredData.slice(
     skip,
@@ -158,7 +176,9 @@ export default async function getDailyOperations(
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
     },
   };
 }
