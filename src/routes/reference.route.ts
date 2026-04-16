@@ -10,8 +10,12 @@ import {
   createAirlineHandler,
   updateAirlineHandler,
   deleteAirlineHandler,
+  createAircraftHandler,
+  updateAircraftHandler,
+  deleteAircraftHandler,
 } from "../controllers/reference/reference.controller";
 import requireRole from "../middleware/requireRole";
+
 
 
 const router = Router();
@@ -26,5 +30,10 @@ router.get("/airlines", requireAuth, asyncHandler(getAirlinesHandler));
 router.post("/airlines", requireAuth, requireRole("ADMIN"), asyncHandler(createAirlineHandler));
 router.patch("/airlines/:id", requireAuth, requireRole("ADMIN"), asyncHandler(updateAirlineHandler));
 router.delete("/airlines/:id", requireAuth, requireRole("ADMIN"), asyncHandler(deleteAirlineHandler));
+
+
+router.post("/aircrafts",requireAuth,requireRole("ADMIN"),asyncHandler(createAircraftHandler));
+router.patch("/aircrafts/:id",requireAuth,requireRole("ADMIN"),asyncHandler(updateAircraftHandler));
+router.delete("/aircrafts/:id",requireAuth,requireRole("ADMIN"),asyncHandler(deleteAircraftHandler));
 
 export default router;

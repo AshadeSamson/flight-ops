@@ -6,6 +6,10 @@ import getAirlines from "../../services/referenceServices/getAirlines";
 import createAirline from "../../services/referenceServices/createAirline";
 import updateAirline from "../../services/referenceServices/updateAirline";
 import deleteAirline from "../../services/referenceServices/deleteAirline";
+import createAircraft from "../../services/referenceServices/createAircraft";
+import updateAircraft from "../../services/referenceServices/updateAircraft";
+import deleteAircraft from "../../services/referenceServices/deleteAircraft";
+
 
 export async function getAircraftsHandler(req: Request, res: Response) {
   const data = await getAircrafts();
@@ -78,5 +82,44 @@ export async function deleteAirlineHandler(
 
   return res.status(200).json({
     message: "Airline deleted successfully",
+  });
+}
+
+
+export async function createAircraftHandler(
+  req: Request,
+  res: Response
+) {
+  const data = await createAircraft(req.body);
+
+  return res.status(201).json({
+    message: "Aircraft created successfully",
+    data,
+  });
+}
+
+export async function updateAircraftHandler(
+  req: Request,
+  res: Response
+) {
+  const data = await updateAircraft(
+    String(req.params.id),
+    req.body
+  );
+
+  return res.status(200).json({
+    message: "Aircraft updated successfully",
+    data,
+  });
+}
+
+export async function deleteAircraftHandler(
+  req: Request,
+  res: Response
+) {
+  await deleteAircraft(String(req.params.id));
+
+  return res.status(200).json({
+    message: "Aircraft deleted successfully",
   });
 }
