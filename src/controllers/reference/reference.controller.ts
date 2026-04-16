@@ -3,6 +3,19 @@ import getAircrafts from "../../services/referenceServices/getAircrafts";
 import getBays from "../../services/referenceServices/getBays";
 import getAirports from "../../services/referenceServices/getAirports";
 import getAirlines from "../../services/referenceServices/getAirlines";
+import createAirline from "../../services/referenceServices/createAirline";
+import updateAirline from "../../services/referenceServices/updateAirline";
+import deleteAirline from "../../services/referenceServices/deleteAirline";
+import createAircraft from "../../services/referenceServices/createAircraft";
+import updateAircraft from "../../services/referenceServices/updateAircraft";
+import deleteAircraft from "../../services/referenceServices/deleteAircraft";
+import createBay from "../../services/referenceServices/createBay";
+import updateBay from "../../services/referenceServices/updateBay";
+import deleteBay from "../../services/referenceServices/deleteBay";
+import createAirport from "../../services/referenceServices/createAirport";
+import updateAirport from "../../services/referenceServices/updateAirport";
+import deleteAirport from "../../services/referenceServices/deleteAirport";
+
 
 export async function getAircraftsHandler(req: Request, res: Response) {
   const data = await getAircrafts();
@@ -37,5 +50,160 @@ export async function getAirlinesHandler(req: Request, res: Response) {
   return res.status(200).json({
     message: "Airlines retrieved successfully",
     data,
+  });
+}
+
+export async function createAirlineHandler(
+  req: Request,
+  res: Response
+) {
+  const data = await createAirline(req.body);
+
+  return res.status(201).json({
+    message: "Airline created successfully",
+    data,
+  });
+}
+
+export async function updateAirlineHandler(
+  req: Request,
+  res: Response
+) {
+  const data = await updateAirline(
+    String(req.params.id),
+    req.body
+  );
+
+  return res.status(200).json({
+    message: "Airline updated successfully",
+    data,
+  });
+}
+
+export async function deleteAirlineHandler(
+  req: Request,
+  res: Response
+) {
+  await deleteAirline(String(req.params.id));
+
+  return res.status(200).json({
+    message: "Airline deleted successfully",
+  });
+}
+
+
+export async function createAircraftHandler(
+  req: Request,
+  res: Response
+) {
+  const data = await createAircraft(req.body);
+
+  return res.status(201).json({
+    message: "Aircraft created successfully",
+    data,
+  });
+}
+
+export async function updateAircraftHandler(
+  req: Request,
+  res: Response
+) {
+  const data = await updateAircraft(
+    String(req.params.id),
+    req.body
+  );
+
+  return res.status(200).json({
+    message: "Aircraft updated successfully",
+    data,
+  });
+}
+
+export async function deleteAircraftHandler(
+  req: Request,
+  res: Response
+) {
+  await deleteAircraft(String(req.params.id));
+
+  return res.status(200).json({
+    message: "Aircraft deleted successfully",
+  });
+}
+
+
+export async function createBayHandler(
+  req: Request,
+  res: Response
+) {
+  const data = await createBay(req.body);
+
+  return res.status(201).json({
+    message: "Bay created successfully",
+    data,
+  });
+}
+
+export async function updateBayHandler(
+  req: Request,
+  res: Response
+) {
+  const data = await updateBay(
+    String(req.params.id),
+    req.body
+  );
+
+  return res.status(200).json({
+    message: "Bay updated successfully",
+    data,
+  });
+}
+
+export async function deleteBayHandler(
+  req: Request,
+  res: Response
+) {
+  await deleteBay(String(req.params.id));
+
+  return res.status(200).json({
+    message: "Bay deleted successfully",
+  });
+}
+
+
+export async function createAirportHandler(
+  req: Request,
+  res: Response
+) {
+  const data = await createAirport(req.body);
+
+  return res.status(201).json({
+    message: "Airport created successfully",
+    data,
+  });
+}
+
+export async function updateAirportHandler(
+  req: Request,
+  res: Response
+) {
+  const data = await updateAirport(
+    String(req.params.id),
+    req.body
+  );
+
+  return res.status(200).json({
+    message: "Airport updated successfully",
+    data,
+  });
+}
+
+export async function deleteAirportHandler(
+  req: Request,
+  res: Response
+) {
+  await deleteAirport(String(req.params.id));
+
+  return res.status(200).json({
+    message: "Airport deleted successfully",
   });
 }
