@@ -14,6 +14,10 @@ export default async function getDailyOperations(
 ) {
   const inputDate = new Date(date);
 
+  if (!date || isNaN(inputDate.getTime())) {
+    throw new Error("Invalid or missing date");
+  }
+
   const lagosDate = new Date(
     inputDate.toLocaleString("en-US", { timeZone: "Africa/Lagos" })
   );

@@ -29,6 +29,12 @@ export async function getDailyOperationsHandler(
     status,
   } = req.query;
 
+  if (!date || isNaN(new Date(date as string).getTime())) {
+    return res.status(400).json({
+      message: "Valid date is required",
+    });
+  }
+
   const data = await getDailyOperations(
     date as string,
     parseInt(page as string),
