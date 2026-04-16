@@ -19,17 +19,16 @@ export default async function createFlightOperation(
     const {
       flightNumber,
       movementType,
-      airlineId,
-      aircraftId,
-      airportId,
-      bayId,
-      sob,
+      aircraftReg,
+      aircraftType,
+      bayName,
+      soulsOnBoard,
       scheduledTime,
       actualTime,
       date,
     } = result.data;
 
-    // 🧠 Normalize Lagos day (same pattern we used before)
+    // 🧠 Normalize Lagos day
     const inputDate = new Date(date);
 
     const lagosDate = new Date(
@@ -42,45 +41,42 @@ export default async function createFlightOperation(
       lagosDate.getDate()
     );
 
-    // 🔍 Optional: Validate referenced entities
-    if (airlineId) {
-      const airline = await prisma.airline.findUnique({
-        where: { id: airlineId },
-      });
+    // 🔄 Map Aircraft (reg → id)
+    let aircraftId: string | undefined;
 
-      if (!airline) {
-        return res.status(404).json({ message: "Airline not found" });
-      }
-    }
-
-    if (aircraftId) {
-      const aircraft = await prisma.aircraft.findUnique({
-        where: { id: aircraftId },
+    if (aircraftReg) {
+      const aircraft = await prisma.aircraft.findFirst({
+        where: {
+          registrationNumber: aircraftReg,
+        },
       });
 
       if (!aircraft) {
-        return res.status(404).json({ message: "Aircraft not found" });
+        return res.status(404).json({
+          message: "Aircraft not found",
+        });
       }
+
+      aircraftId = aircraft.id;
     }
 
-    if (airportId) {
-      const airport = await prisma.airport.findUnique({
-        where: { id: airportId },
-      });
+    // 🔄 Map Bay (name → id)
+    let bayId: string | undefined;
 
-      if (!airport) {
-        return res.status(404).json({ message: "Airport not found" });
-      }
-    }
-
-    if (bayId) {
-      const bay = await prisma.bay.findUnique({
-        where: { id: bayId },
+    if (bayName) {
+      const bay = await prisma.bay.findFirst({
+        where: {
+          name: bayName,
+        },
       });
 
       if (!bay) {
-        return res.status(404).json({ message: "Bay not found" });
+        return res.status(404).json({
+          message: "Bay not found",
+        });
       }
+
+      bayId = bay.id;
     }
 
     // 👤 Get user
@@ -92,12 +88,10 @@ export default async function createFlightOperation(
         flightNumber,
         movementType,
 
-        airlineId,
         aircraftId,
-        airportId,
         bayId,
 
-        sob,
+        sob: soulsOnBoard,
 
         scheduledTime,
         actualTime: actualTime ? new Date(actualTime) : undefined,

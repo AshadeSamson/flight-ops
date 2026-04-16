@@ -42,7 +42,7 @@ export default function normalizeFidsData(
   );
 
   return allFlights.map((flight) => ({
-    flightNumber: flight.flightNumber.trim(),
+    flightNumber: `${flight.airlineCode.trim()}${flight.flightNumber.trim()}`,
     airlineCode: flight.airlineCode.trim(),
 
     airportName: flight.airport.trim(),

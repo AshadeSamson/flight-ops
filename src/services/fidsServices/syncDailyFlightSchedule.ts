@@ -41,7 +41,7 @@ export default async function syncDailyFlightSchedule() {
     // 🟢 Step 2: Insert fresh data
     await prisma.dailyFlightSchedule.createMany({
       data: flights.map((flight) => ({
-        flightNumber: flight.flightNumber,
+        flightNumber: `${flight.airlineCode.trim()}${flight.flightNumber.trim()}`,
         airlineCode: flight.airlineCode,
         airlineName: undefined,
 
