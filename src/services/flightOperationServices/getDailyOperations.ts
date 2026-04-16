@@ -1,5 +1,9 @@
 import { prisma } from "../../config/prisma";
-import { buildScheduledDateTime, calculateDelayMinutes, getDelayStatus} from "../../utils/flightMetrics";
+import {
+  buildScheduledDateTime,
+  calculateDelayMinutes,
+  getDelayStatus,
+} from "../../utils/flightMetrics";
 
 export default async function getDailyOperations(
   date: string,
@@ -10,30 +14,31 @@ export default async function getDailyOperations(
     airlineCode?: string;
     search?: string;
     status?: "ON_TIME" | "MINOR_DELAY" | "DELAYED" | "PENDING";
-}
+  }
 ) {
-  const inputDate = new Date(date);
-
-  if (!date || isNaN(inputDate.getTime())) {
+  if (!date) {
     throw new Error("Invalid or missing date");
   }
 
-  const lagosDate = new Date(
-    inputDate.toLocaleString("en-US", { timeZone: "Africa/Lagos" })
-  );
+  // ✅ Expecting YYYY-MM-DD
+  const [year, month, day] = date.split("-").map(Number);
 
+  if (!year || !month || !day) {
+    throw new Error("Invalid date format. Use YYYY-MM-DD");
+  }
+
+  // ✅ Lagos midnight converted to UTC
   const startOfDay = new Date(
-    lagosDate.getFullYear(),
-    lagosDate.getMonth(),
-    lagosDate.getDate()
+    Date.UTC(year, month - 1, day, -1, 0, 0)
   );
 
-  const endOfDay = new Date(startOfDay);
-  endOfDay.setDate(endOfDay.getDate() + 1);
+  // ✅ Next Lagos midnight converted to UTC
+  const endOfDay = new Date(
+    Date.UTC(year, month - 1, day + 1, -1, 0, 0)
+  );
 
   const skip = (page - 1) * limit;
 
-  // 🧠 Build WHERE condition dynamically
   const where: any = {
     date: {
       gte: startOfDay,
@@ -66,24 +71,13 @@ export default async function getDailyOperations(
     ];
   }
 
-  if (filters?.status) {
-    filters.status = filters.status.toUpperCase() as any;
-  }
-
-  // 🟢 Total count
-  const total = await prisma.dailyFlightSchedule.count({ where });
-
-  // 🟢 Paginated schedules
   const schedules = await prisma.dailyFlightSchedule.findMany({
     where,
     orderBy: {
       scheduledTime: "asc",
     },
-    skip,
-    take: limit,
   });
 
-  // 🟢 Fetch operations
   const operations = await prisma.flightOperation.findMany({
     where: {
       date: {
@@ -97,25 +91,28 @@ export default async function getDailyOperations(
     },
   });
 
-  // 🧠 Merge
   const merged = schedules.map((flight) => {
     const operation = operations.find(
       (op) =>
         op.flightNumber === flight.flightNumber &&
         op.movementType === flight.movementType
     );
-  
+
     const scheduledDateTime = buildScheduledDateTime(
       startOfDay,
       flight.scheduledTime
     );
 
-    const delayMinutes = calculateDelayMinutes(
-      scheduledDateTime,
-      operation?.actualTime
-    );
+    const delayMinutes =
+      operation?.delayMinutes ??
+      calculateDelayMinutes(
+        scheduledDateTime,
+        operation?.actualTime
+      );
 
-    const delayStatus = getDelayStatus(delayMinutes);
+    const delayStatus =
+      operation?.delayStatus ??
+      getDelayStatus(delayMinutes);
 
     return {
       scheduleId: flight.id,
@@ -129,21 +126,31 @@ export default async function getDailyOperations(
       soulsOnBoard: operation?.soulsOnBoard || null,
       actualTime: operation?.actualTime || null,
 
-      aircraftReg: operation?.aircraft?.registrationNumber || null,
+      aircraftReg:
+        operation?.aircraft?.registrationNumber || null,
       aircraftType: operation?.aircraft?.type || null,
 
       bayName: operation?.bay?.name || null,
 
-      delayMinutes: operation?.delayMinutes ?? null,
-      delayStatus: operation?.delayStatus ?? "PENDING",
+      delayMinutes,
+      delayStatus,
     };
   });
 
   const filteredData = filters?.status
-  ? merged.filter((f) => f.delayStatus === filters.status)
-  : merged;
+    ? merged.filter(
+        (row) =>
+          row.delayStatus ===
+          filters.status?.toUpperCase()
+      )
+    : merged;
 
-  const paginated = filteredData.slice(skip, skip + limit);
+  const total = filteredData.length;
+
+  const paginated = filteredData.slice(
+    skip,
+    skip + limit
+  );
 
   return {
     data: paginated,
