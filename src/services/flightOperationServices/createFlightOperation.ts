@@ -91,7 +91,7 @@ export default async function createFlightOperation(
         aircraftId,
         bayId,
 
-        sob: soulsOnBoard,
+        soulsOnBoard: soulsOnBoard,
 
         scheduledTime,
         actualTime: actualTime ? new Date(actualTime) : undefined,
