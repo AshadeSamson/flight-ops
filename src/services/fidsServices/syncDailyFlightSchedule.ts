@@ -10,39 +10,36 @@ export default async function syncDailyFlightSchedule() {
       return;
     }
 
-    // Get today's date (start of day)
-    // ✅ Lagos-safe "today"
-      const now = new Date();
+    // ✅ Lagos operational day (stored as UTC equivalent)
+    const now = new Date();
 
-      const lagosNow = new Date(
-        now.toLocaleString("en-US", { timeZone: "Africa/Lagos" })
-      );
+    const lagosNow = new Date(
+      now.toLocaleString("en-US", {
+        timeZone: "Africa/Lagos",
+      })
+    );
 
-      const startOfDay = new Date(
+    const startOfDay = new Date(
+      Date.UTC(
         lagosNow.getFullYear(),
         lagosNow.getMonth(),
-        lagosNow.getDate()
-      );
+        lagosNow.getDate(),
+        -1,
+        0,
+        0
+      )
+    );
 
-      const endOfDay = new Date(startOfDay);
-      endOfDay.setDate(endOfDay.getDate() + 1);
-    
+    // 🔴 Clear ALL previous cache rows
+    await prisma.dailyFlightSchedule.deleteMany({});
 
-    // 🔴 Step 1: Delete existing records for today
-    await prisma.dailyFlightSchedule.deleteMany({
-      where: {
-        date: {
-          gte: startOfDay,
-          lt: endOfDay,
-        },
-      },
-    });
-
-    // 🟢 Step 2: Insert fresh data
+    // 🟢 Insert fresh rows for today only
     await prisma.dailyFlightSchedule.createMany({
       data: flights.map((flight) => ({
-        flightNumber: `${flight.airlineCode.trim()}${flight.flightNumber.trim()}`,
-        airlineCode: flight.airlineCode,
+        // ✅ FIDS already provides full flight number
+        flightNumber: flight.flightNumber.trim(),
+
+        airlineCode: flight.airlineCode.trim(),
         airlineName: undefined,
 
         movementType: flight.movementType,
@@ -53,14 +50,19 @@ export default async function syncDailyFlightSchedule() {
         scheduledTime: flight.scheduledTime,
         status: flight.status,
 
-        date: flight.date,
+        date: startOfDay,
       })),
-      skipDuplicates: true, // safety
+      skipDuplicates: true,
     });
 
-    console.log(`✅ Synced ${flights.length} flights`);
+    console.log(
+      `✅ Synced ${flights.length} flights for ${startOfDay.toISOString()}`
+    );
   } catch (error) {
-    console.error("❌ Failed to sync DailyFlightSchedule:", error);
+    console.error(
+      "❌ Failed to sync DailyFlightSchedule:",
+      error
+    );
     throw error;
   }
 }
