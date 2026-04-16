@@ -1,8 +1,8 @@
 #### API_URL: `https://flight-ops-production.up.railway.app`
 
-# Auth & Users API Documentation
+# Auth, Users & Dashboard API Documentation
 
-This document covers the authentication and user management endpoints exposed by the backend for frontend integration.
+This document covers the authentication, user management, and dashboard endpoints exposed by the backend for frontend integration.
 
 Base path:
 
@@ -22,6 +22,7 @@ Access token notes:
 
 - Returned by the login endpoint.
 - JWT expires in `12h`.
+- `GET /api/v1/auth/me` returns the currently authenticated user from the access token lookup flow.
 - User management endpoints other than `GET /users/profile` are restricted to `ADMIN`.
 
 ## Common Error Response Shapes
@@ -252,6 +253,74 @@ Possible error responses:
 ```json
 {
   "message": "Internal server error"
+}
+```
+
+### `GET /api/v1/auth/me`
+
+Returns the currently authenticated user from the auth middleware context.
+
+Auth:
+
+- Requires `Authorization: Bearer <access_token>`.
+- Any authenticated user can access this route.
+
+Request body:
+
+- None
+
+Success response: `200 OK`
+
+```json
+{
+  "message": "Current user retrieved successfully",
+  "data": {
+    "id": "clx123456789",
+    "role": "ADMIN",
+    "email": "admin@example.com",
+    "name": "John Doe",
+    "isEmailVerified": true
+  }
+}
+```
+
+Frontend notes:
+
+- This is the best endpoint for restoring the logged-in user after app refresh.
+- The current implementation returns `id`, `role`, `email`, `name`, and `isEmailVerified`.
+- Unlike the login response, this endpoint does not currently return `staffId`.
+
+Possible error responses:
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized: Invalid token"
+}
+```
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized: Invalid token version"
+}
+```
+
+- `404 Not Found`
+
+```json
+{
+  "message": "User does not exist"
 }
 ```
 
@@ -692,11 +761,92 @@ Possible error responses:
 }
 ```
 
+## Dashboard Endpoints
+
+### `GET /api/v1/dashboard/today-summary`
+
+Returns today's dashboard summary counts based on the Lagos day.
+
+Auth:
+
+- Requires `Authorization: Bearer <access_token>`.
+- Requires `ADMIN` or `SUPERVISOR` role.
+
+Request body:
+
+- None
+
+Success response: `200 OK`
+
+```json
+{
+  "message": "Dashboard summary retrieved successfully",
+  "data": {
+    "totalScheduled": 48,
+    "completed": 31,
+    "pending": 17,
+    "delayed": 6,
+    "arrivals": 24,
+    "departures": 24
+  }
+}
+```
+
+Response field notes:
+
+- `totalScheduled`: total number of scheduled flights for today.
+- `completed`: number of flight operations for today with a non-null `actualTime`.
+- `pending`: `totalScheduled - completed`.
+- `delayed`: number of flight operations for today with `delayStatus` equal to `DELAYED`.
+- `arrivals`: total number of scheduled arrival flights for today.
+- `departures`: total number of scheduled departure flights for today.
+
+Frontend notes:
+
+- This endpoint does not take query parameters.
+- The summary is computed using the current Lagos day on the server, not a date supplied by the client.
+
+Possible error responses:
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+- `403 Forbidden`
+
+```json
+{
+  "message": "Forbidden: Insufficient permissions"
+}
+```
+
+- `404 Not Found`
+
+```json
+{
+  "message": "User does not exist"
+}
+```
+
+- `500 Internal Server Error`
+
+```json
+{
+  "message": "Internal server error"
+}
+```
+
 ## Frontend Integration Notes
 
 - Store the login `token` and send it as a Bearer token on protected requests.
+- Use `GET /api/v1/auth/me` to rehydrate the current user session on app load.
 - `forgot-password` should always show a neutral success message, even when the email does not exist.
 - `password-reset` requires the `token` from the reset link query string.
+- `GET /api/v1/dashboard/today-summary` is available only to `ADMIN` and `SUPERVISOR`.
 - User list responses are paginated and include `meta.total`, `meta.page`, `meta.limit`, and `meta.totalPages`.
 - Role values used by the backend are exactly `ADMIN`, `SUPERVISOR`, and `OPS_STAFF`.
 - `staffId` format expected by validation is `BASL/ID/12345678` and accepts 8 to 10 digits after the final slash.
