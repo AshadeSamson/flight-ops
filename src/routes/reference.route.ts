@@ -1,7 +1,6 @@
 import { Router } from "express";
 import asyncHandler from "../middleware/asyncHandler";
 import requireAuth from "../middleware/requireAuth";
-
 import {
   getAircraftsHandler,
   getBaysHandler,
@@ -13,6 +12,9 @@ import {
   createAircraftHandler,
   updateAircraftHandler,
   deleteAircraftHandler,
+  createBayHandler,
+  updateBayHandler,
+  deleteBayHandler,
 } from "../controllers/reference/reference.controller";
 import requireRole from "../middleware/requireRole";
 
@@ -35,5 +37,10 @@ router.delete("/airlines/:id", requireAuth, requireRole("ADMIN"), asyncHandler(d
 router.post("/aircrafts",requireAuth,requireRole("ADMIN"),asyncHandler(createAircraftHandler));
 router.patch("/aircrafts/:id",requireAuth,requireRole("ADMIN"),asyncHandler(updateAircraftHandler));
 router.delete("/aircrafts/:id",requireAuth,requireRole("ADMIN"),asyncHandler(deleteAircraftHandler));
+
+
+router.post("/bays", requireAuth, requireRole("ADMIN"), asyncHandler(createBayHandler));
+router.patch("/bays/:id", requireAuth, requireRole("ADMIN"), asyncHandler(updateBayHandler));
+router.delete("/bays/:id", requireAuth, requireRole("ADMIN"), asyncHandler(deleteBayHandler));
 
 export default router;
