@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "ts-node src/server.ts",
     "build": "tsc",
-    "start": "node dist/src/server.js"
+    "start": "node dist/src/server.js",
+    "sync": "ts-node src/scripts/testFidsSync.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
