@@ -3,6 +3,7 @@ import createFlightOperation from "../../services/flightOperationServices/create
 import getDailyOperations from "../../services/flightOperationServices/getDailyOperations";
 import upsertFlightOperation from "../../services/flightOperationServices/upsertFlightOperation";
 import getFlightFromSchedule from "../../services/flightOperationServices/getFlightFromSchedule";
+import getFlightOperations from "../../services/flightOperationServices/getFlightOperations";
 
 
 // 🔹 Secondary (manual / admin use)
@@ -37,7 +38,7 @@ export async function getDailyOperationsHandler(
   const data = await getDailyOperations(
     String(date),
     Number(page),
-    20, // ✅ frontend only needs to send page
+    20,
     {
       movementType:
         movementType as "ARRIVAL" | "DEPARTURE",
@@ -61,6 +62,47 @@ export async function upsertFlightOperationHandler(
 ) {
   await upsertFlightOperation(req, res);
 }
+
+
+
+export async function getFlightOperationsHandler(
+  req: Request,
+  res: Response
+) {
+  const {
+    date,
+    page = "1",
+    movementType,
+    airlineCode,
+    search,
+    status,
+  } = req.query;
+
+  if (!date) {
+    return res.status(400).json({
+      message: "date is required",
+    });
+  }
+
+  const data = await getFlightOperations(
+    String(date),
+    Number(page),
+    20,
+    {
+      movementType:
+        movementType as "ARRIVAL" | "DEPARTURE",
+      airlineCode: airlineCode as string,
+      search: search as string,
+      status: status as any,
+    }
+  );
+
+  return res.status(200).json({
+    message: "Flight Operations retrieved successfully",
+    ...data,
+  });
+}
+
 
 
 //  Optional helper
