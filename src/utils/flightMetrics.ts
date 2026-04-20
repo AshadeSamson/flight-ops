@@ -21,7 +21,11 @@ export function calculateDelayMinutes(
 ): number | null {
   if (!actual) return null;
 
-  const diffMs = actual.getTime() - scheduled.getTime();
+  const actualLagos = new Date(
+    actual.toLocaleString("en-US", { timeZone: "Africa/Lagos" })
+  );
+
+  const diffMs = actualLagos.getTime() - scheduled.getTime();
 
   return Math.round(diffMs / (1000 * 60)); // minutes
 }
