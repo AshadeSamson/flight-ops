@@ -26,6 +26,9 @@ export default async function upsertFlightOperation(
       movementType,
       aircraftReg,
       bayName,
+      airlineCode,
+      airportCode,
+      airportName,
       soulsOnBoard,
       scheduledTime,
       actualTime,
@@ -51,8 +54,23 @@ export default async function upsertFlightOperation(
       lagosDate.getDate()
     );
 
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setDate(endOfDay.getDate() + 1);
+
+    const schedule = await prisma.dailyFlightSchedule.findFirst({
+      where: {
+        flightNumber,
+        movementType,
+        date: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+      },
+    });
+
     // 🔄 Map Aircraft
     let aircraftId: string | undefined;
+    let aircraftAirlineId: string | undefined;
 
     if (aircraftReg) {
       const aircraft = await prisma.aircraft.findFirst({
@@ -66,6 +84,7 @@ export default async function upsertFlightOperation(
       }
 
       aircraftId = aircraft.id;
+      aircraftAirlineId = aircraft.airlineId;
     }
 
     // 🔄 Map Bay
@@ -83,6 +102,77 @@ export default async function upsertFlightOperation(
       }
 
       bayId = bay.id;
+    }
+
+    // Map Airline
+    let airlineId: string | undefined;
+
+    const flightNumberParts = flightNumber.trim().split(/\s+/);
+    const flightAirlineCode =
+      flightNumberParts.length > 1
+        ? flightNumberParts[0]?.toUpperCase()
+        : undefined;
+
+    const resolvedAirlineCode =
+      airlineCode?.trim().toUpperCase() ||
+      schedule?.airlineCode?.trim().toUpperCase() ||
+      flightAirlineCode;
+
+    if (resolvedAirlineCode) {
+      const airline = await prisma.airline.findUnique({
+        where: { code: resolvedAirlineCode },
+      });
+
+      if (!airline) {
+        return res.status(404).json({
+          message: "Airline not found",
+        });
+      }
+
+      airlineId = airline.id;
+    } else if (aircraftAirlineId) {
+      airlineId = aircraftAirlineId;
+    }
+
+    // Map Airport
+    let airportId: string | undefined;
+
+    const resolvedAirportCode =
+      airportCode?.trim().toUpperCase() ||
+      schedule?.airportCode?.trim().toUpperCase();
+
+    const resolvedAirportName =
+      airportName?.trim() || schedule?.airportName?.trim();
+
+    if (resolvedAirportCode) {
+      const airport = await prisma.airport.findUnique({
+        where: { code: resolvedAirportCode },
+      });
+
+      if (!airport) {
+        return res.status(404).json({
+          message: "Airport not found",
+        });
+      }
+
+      airportId = airport.id;
+    } else if (resolvedAirportName) {
+      const airport = await prisma.airport.findFirst({
+        where: {
+          name: {
+            equals: resolvedAirportName,
+            mode: "insensitive",
+          },
+        },
+      });
+
+      if (!airport) {
+        return res.status(404).json({
+          message: "Airport not found",
+        });
+      }
+
+      airportId = airport.id;
     }
 
     // 👤 Get user
@@ -117,6 +207,8 @@ export default async function upsertFlightOperation(
       },
       update: {
         ...(aircraftId && { aircraftId }),
+        ...(airlineId && { airlineId }),
+        ...(airportId && { airportId }),
         ...(bayId && { bayId }),
         ...(soulsOnBoard !== undefined && { soulsOnBoard }),
         ...(scheduledTime && { scheduledTime }),
@@ -131,6 +223,8 @@ export default async function upsertFlightOperation(
         date: startOfDay,
 
         aircraftId,
+        airlineId,
+        airportId,
         bayId,
         soulsOnBoard,
 

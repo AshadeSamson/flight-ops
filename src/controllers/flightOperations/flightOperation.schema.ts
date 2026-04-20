@@ -37,6 +37,9 @@ export const updateFlightOperationSchema = z.object({
   aircraftReg: z.string().optional(),
   aircraftType: z.string().optional(),
   bayName: z.string().optional(),
+  airlineCode: z.string().optional(),
+  airportCode: z.string().optional(),
+  airportName: z.string().optional(),
 
   soulsOnBoard: z.number().int().positive().optional(),
 
