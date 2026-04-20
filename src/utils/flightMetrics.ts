@@ -34,9 +34,9 @@ export function calculateDelayMinutes(
 export function getDelayStatus(delay: number | null) {
   if (delay === null) return "PENDING";
 
-  if (delay <= 0) return "ON_TIME";
+  if (delay <= 5) return "ON_TIME";
 
-  if (delay <= 15) return "MINOR_DELAY";
+  if (delay > 5 && delay <= 20) return "MINOR_DELAY";
 
   return "DELAYED";
 }
