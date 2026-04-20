@@ -438,3 +438,108 @@ Frontend notes:
 - Prefer `PATCH /upsert` for the editable operations table.
 - `POST /` is better suited for manual or secondary workflows.
 - This endpoint returns the raw operation record as stored by Prisma.
+
+### `GET /api/v1/flight-operations/history`
+
+Returns historical flight operation records within a specified date range, with optional filtering and pagination.
+
+Query parameters:
+
+- `startDate`: required ISO date string (YYYY-MM-DD).
+- `endDate`: required ISO date string (YYYY-MM-DD).
+- `page`: optional, default `1`.
+- `limit`: optional, default `20`.
+- `movementType`: optional, `ARRIVAL` or `DEPARTURE`.
+- `airlineCode`: optional string.
+- `search`: optional string, matched against `flightNumber`.
+- `status`: optional, one of `ON_TIME`, `MINOR_DELAY`, `DELAYED`, `PENDING`.
+
+Example request:
+
+```text
+GET /api/v1/flight-operations/history?startDate=2026-04-10&endDate=2026-04-15&page=1&limit=20&movementType=ARRIVAL&airlineCode=Q9&search=Q9&status=ON_TIME
+```
+
+Success response: `200 OK`
+
+```json
+{
+  "message": "Flight history retrieved successfully",
+  "data": [
+    {
+      "id": "clxop123",
+      "flightNumber": "Q9123",
+      "movementType": "ARRIVAL",
+      "airlineId": "clxairl123",
+      "aircraftId": "clxair123",
+      "airportId": "clxairp123",
+      "bayId": "clxbay123",
+      "soulsOnBoard": 112,
+      "scheduledTime": "09:30:00",
+      "actualTime": "2026-04-15T09:42:00.000Z",
+      "delayMinutes": 12,
+      "delayStatus": "MINOR_DELAY",
+      "date": "2026-04-15T00:00:00.000Z",
+      "createdById": "clxuser123",
+      "createdAt": "2026-04-15T09:10:00.000Z",
+      "updatedAt": "2026-04-15T09:42:30.000Z",
+      "airline": {
+        "id": "clxairl123",
+        "code": "Q9",
+        "name": "Air Peace"
+      },
+      "aircraft": {
+        "id": "clxair123",
+        "registration": "5N-BXX",
+        "type": "B737"
+      },
+      "bay": {
+        "id": "clxbay123",
+        "name": "BAY 04",
+        "code": "B04"
+      },
+      "airport": {
+        "id": "clxairp123",
+        "name": "Lagos",
+        "code": "LOS"
+      }
+    }
+  ],
+  "meta": {
+    "total": 42,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 3,
+    "hasNextPage": true,
+    "hasPrevPage": false
+  }
+}
+```
+
+Response field notes:
+
+- The `data` array contains flight operation records with related `airline`, `aircraft`, `bay`, and `airport` objects included.
+- Dates are filtered inclusively between `startDate` and `endDate`.
+
+Possible error responses:
+
+- `400 Bad Request`
+
+```json
+{
+  "message": "Invalid date format"
+}
+```
+
+- `500 Internal Server Error`
+
+```json
+{
+  "message": "Internal server error"
+}
+```
+
+Frontend notes:
+
+- Use this endpoint for generating reports or viewing historical flight operations data.
+- Ensure `startDate` and `endDate` are provided to avoid broad queries.
