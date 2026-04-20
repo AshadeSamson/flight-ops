@@ -28,7 +28,7 @@ export default async function createFlightOperation(
       date,
     } = result.data;
 
-    // 🧠 Normalize Lagos day
+    //  Normalize Lagos day
     const inputDate = new Date(date);
 
     const lagosDate = new Date(
@@ -60,7 +60,7 @@ export default async function createFlightOperation(
       aircraftId = aircraft.id;
     }
 
-    // 🔄 Map Bay (name → id)
+    //  Map Bay (name → id)
     let bayId: string | undefined;
 
     if (bayName) {
@@ -82,7 +82,7 @@ export default async function createFlightOperation(
     // 👤 Get user
     const user = (req as any).user;
 
-    // 🟢 Create record
+    //  Create record
     const operation = await prisma.flightOperation.create({
       data: {
         flightNumber,

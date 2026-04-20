@@ -3,6 +3,7 @@ import createFlightOperation from "../../services/flightOperationServices/create
 import getDailyOperations from "../../services/flightOperationServices/getDailyOperations";
 import upsertFlightOperation from "../../services/flightOperationServices/upsertFlightOperation";
 import getFlightFromSchedule from "../../services/flightOperationServices/getFlightFromSchedule";
+import getFlightOperationsHistory from "../../services/flightOperationServices/getFlightOperationsHistory";
 
 
 // 🔹 Secondary (manual / admin use)
@@ -37,7 +38,7 @@ export async function getDailyOperationsHandler(
   const data = await getDailyOperations(
     String(date),
     Number(page),
-    20, // ✅ frontend only needs to send page
+    20,
     {
       movementType:
         movementType as "ARRIVAL" | "DEPARTURE",
@@ -60,6 +61,34 @@ export async function upsertFlightOperationHandler(
   res: Response
 ) {
   await upsertFlightOperation(req, res);
+}
+
+
+export async function getFlightOperationsHistoryHandler(
+  req: Request,
+  res: Response
+) {
+  const data =
+    await getFlightOperationsHistory({
+      startDate: String(req.query.startDate),
+      endDate: String(req.query.endDate),
+      page: Number(req.query.page || 1),
+      limit: Number(req.query.limit || 20),
+      movementType:
+        req.query.movementType as any,
+      airlineCode:
+        req.query.airlineCode as string,
+      status:
+        req.query.status as string,
+      search:
+        req.query.search as string,
+    });
+
+  return res.status(200).json({
+    message:
+      "Flight history retrieved successfully",
+    ...data,
+  });
 }
 
 

@@ -6,7 +6,8 @@ import {
   createFlightOperationHandler,
   getFlightFromScheduleHandler,
   upsertFlightOperationHandler,
-  getDailyOperationsHandler
+  getDailyOperationsHandler,
+  getFlightOperationsHistoryHandler
 } from "../controllers/flightOperations/flightOperation.controller";
 
 
@@ -17,5 +18,7 @@ router.get( "/daily", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF
 router.patch( "/upsert", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(upsertFlightOperationHandler));
 router.get( "/schedule", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(getFlightFromScheduleHandler));
 router.post( "/", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(createFlightOperationHandler));
+router.get("/history", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(getFlightOperationsHistoryHandler));
+
 
 export default router;
