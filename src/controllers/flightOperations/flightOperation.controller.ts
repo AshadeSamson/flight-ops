@@ -3,7 +3,7 @@ import createFlightOperation from "../../services/flightOperationServices/create
 import getDailyOperations from "../../services/flightOperationServices/getDailyOperations";
 import upsertFlightOperation from "../../services/flightOperationServices/upsertFlightOperation";
 import getFlightFromSchedule from "../../services/flightOperationServices/getFlightFromSchedule";
-import getFlightOperations from "../../services/flightOperationServices/getFlightOperations";
+import getFlightOperationsHistory from "../../services/flightOperationServices/getFlightOperationsHistory";
 
 
 // 🔹 Secondary (manual / admin use)
@@ -64,45 +64,32 @@ export async function upsertFlightOperationHandler(
 }
 
 
-
-export async function getFlightOperationsHandler(
+export async function getFlightOperationsHistoryHandler(
   req: Request,
   res: Response
 ) {
-  const {
-    date,
-    page = "1",
-    movementType,
-    airlineCode,
-    search,
-    status,
-  } = req.query;
-
-  if (!date) {
-    return res.status(400).json({
-      message: "date is required",
-    });
-  }
-
-  const data = await getFlightOperations(
-    String(date),
-    Number(page),
-    20,
-    {
+  const data =
+    await getFlightOperationsHistory({
+      startDate: String(req.query.startDate),
+      endDate: String(req.query.endDate),
+      page: Number(req.query.page || 1),
+      limit: Number(req.query.limit || 20),
       movementType:
-        movementType as "ARRIVAL" | "DEPARTURE",
-      airlineCode: airlineCode as string,
-      search: search as string,
-      status: status as any,
-    }
-  );
+        req.query.movementType as any,
+      airlineCode:
+        req.query.airlineCode as string,
+      status:
+        req.query.status as string,
+      search:
+        req.query.search as string,
+    });
 
   return res.status(200).json({
-    message: "Flight Operations retrieved successfully",
+    message:
+      "Flight history retrieved successfully",
     ...data,
   });
 }
-
 
 
 //  Optional helper
