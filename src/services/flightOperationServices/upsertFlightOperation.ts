@@ -21,6 +21,7 @@ export default async function upsertFlightOperation(
       });
     }
 
+    
     const {
       flightNumber,
       movementType,
