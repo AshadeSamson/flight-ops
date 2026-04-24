@@ -18,14 +18,10 @@ enum UserRole {
   OPS_STAFF
 }
 
-
-
 enum MovementType {
   ARRIVAL
   DEPARTURE
 }
-
-
 
 enum OperationStatus {
   DRAFT
@@ -33,32 +29,28 @@ enum OperationStatus {
   COMPLETED
 }
 
-
-
 model User {
-  id            String    @id @default(cuid())
+  id String @id @default(cuid())
 
-  name          String
-  email         String    @unique
-  passwordHash  String
+  name         String
+  email        String @unique
+  passwordHash String
 
-  staffId       String    @unique
-  role          UserRole
+  staffId String   @unique
+  role    UserRole
 
   flightOperations FlightOperation[]
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 }
 
-
-
 model Airline {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  name      String
-  code      String   @unique
+  name String
+  code String @unique
 
   aircrafts Aircraft[]
   flights   FlightOperation[]
@@ -67,112 +59,103 @@ model Airline {
   updatedAt DateTime @updatedAt
 }
 
-
-
 model Aircraft {
-  id                 String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  registrationNumber String   @unique
+  registrationNumber String @unique
   type               String
   maxCapacity        Int
 
-  airlineId          String
-  airline            Airline  @relation(fields: [airlineId], references: [id])
+  airlineId String
+  airline   Airline @relation(fields: [airlineId], references: [id])
 
-  flights            FlightOperation[]
+  flights FlightOperation[]
 
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
-
-
 
 model Airport {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  name      String
-  code      String   @unique
+  name String
+  code String @unique
 
-  flights   FlightOperation[]
+  flights FlightOperation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
-
 
 model Bay {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  name      String   @unique
-  code      String   @unique
+  name String @unique
+  code String @unique
 
-  flights   FlightOperation[]
+  flights FlightOperation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-
-
 model FlightOperation {
-  id            String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  flightNumber  String
+  flightNumber String
 
-  movementType  MovementType
+  movementType MovementType
 
-  airlineId     String?
-  airline       Airline? @relation(fields: [airlineId], references: [id])
+  airlineId String?
+  airline   Airline? @relation(fields: [airlineId], references: [id])
 
-  aircraftId    String?
-  aircraft      Aircraft? @relation(fields: [aircraftId], references: [id])
+  aircraftId String?
+  aircraft   Aircraft? @relation(fields: [aircraftId], references: [id])
 
-  airportId     String?
-  airport       Airport? @relation(fields: [airportId], references: [id])
+  airportId String?
+  airport   Airport? @relation(fields: [airportId], references: [id])
 
-  bayId         String?
-  bay           Bay? @relation(fields: [bayId], references: [id])
+  bayId String?
+  bay   Bay?    @relation(fields: [bayId], references: [id])
 
-  soulsOnBoard  Int? // Souls on Board
+  soulsOnBoard Int? // Souls on Board
 
   scheduledTime String // from FIDS or manual
   actualTime    DateTime? // real recorded time
 
-  delayMinutes  Int?
-  delayStatus   String?
+  delayMinutes Int?
+  delayStatus  String?
 
-  date          DateTime // Lagos day anchor
+  date DateTime // Lagos day anchor
 
-  createdById   String?
-  createdBy     User? @relation(fields: [createdById], references: [id])
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id])
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([flightNumber, date, movementType])
 }
 
-
 model DailyFlightSchedule {
-  id            String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  flightNumber  String
-  airlineCode   String?
-  airlineName   String?
+  flightNumber String
+  airlineCode  String?
+  airlineName  String?
 
-  movementType  MovementType
+  movementType MovementType
 
-  airportCode   String?
-  airportName   String
+  airportCode String?
+  airportName String
 
   scheduledTime String
 
-  status        String?
+  status String?
 
-  date          DateTime
+  date DateTime
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([flightNumber, date, movementType])
   @@index([date])
