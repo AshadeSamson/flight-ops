@@ -42,7 +42,7 @@ export default async function upsertFlightOperation(
       });
     }
 
-    // 🧠 Normalize Lagos day
+    //  Normalize Lagos day
     const inputDate = new Date(date);
 
     const lagosDate = new Date(
@@ -69,7 +69,7 @@ export default async function upsertFlightOperation(
       },
     });
 
-    // 🔄 Map Aircraft
+    //  Map Aircraft
     let aircraftId: string | undefined;
     let aircraftAirlineId: string | undefined;
 
@@ -88,7 +88,7 @@ export default async function upsertFlightOperation(
       aircraftAirlineId = aircraft.airlineId;
     }
 
-    // 🔄 Map Bay
+    //  Map Bay
     let bayId: string | undefined;
 
     if (bayName) {
@@ -176,10 +176,10 @@ export default async function upsertFlightOperation(
       airportId = airport.id;
     }
 
-    // 👤 Get user
+    //  Get user
     const user = (req as any).user;
 
-    // 🧠 Build scheduled datetime (only if scheduledTime exists)
+    //  Build scheduled datetime (only if scheduledTime exists)
     let delayMinutes: number | null = null;
     let delayStatus: string | null = null;
 
@@ -197,7 +197,7 @@ export default async function upsertFlightOperation(
       delayStatus = getDelayStatus(delayMinutes);
     }
 
-    // 🔥 TRUE UPSERT (atomic)
+    //  TRUE UPSERT (atomic)
     const operation = await prisma.flightOperation.upsert({
       where: {
         flightNumber_date_movementType: {

@@ -1,10 +1,10 @@
 type RawFidsFlight = {
-  airlineCode: string;
-  flightNumber: string;
-  airport: string;
-  scheduledTime: string;
+  airlineCode?: string;
+  flightNumber?: string;
+  airport?: string;
+  scheduledTime?: string;
   status?: string;
-  movementType: "ARRIVAL" | "DEPARTURE";
+  movementType?: "ARRIVAL" | "DEPARTURE";
 };
 
 type NormalizedFlight = {
@@ -14,25 +14,27 @@ type NormalizedFlight = {
   airportName: string;
   airportCode?: string;
 
-  scheduledTime: string; 
+  scheduledTime: string;
   status?: string;
 
   movementType: "ARRIVAL" | "DEPARTURE";
 
-  date: Date; 
+  date: Date;
 };
 
 export default function normalizeFidsData(
-  departures: RawFidsFlight[],
-  arrivals: RawFidsFlight[]
+  departures: RawFidsFlight[] = [],
+  arrivals: RawFidsFlight[] = []
 ): NormalizedFlight[] {
   const allFlights = [...departures, ...arrivals];
 
-  // ✅ Lagos "today" 
+  // Lagos operational day
   const now = new Date();
 
   const lagosToday = new Date(
-    now.toLocaleString("en-US", { timeZone: "Africa/Lagos" })
+    now.toLocaleString("en-US", {
+      timeZone: "Africa/Lagos",
+    })
   );
 
   const startOfDay = new Date(
@@ -41,18 +43,51 @@ export default function normalizeFidsData(
     lagosToday.getDate()
   );
 
-  return allFlights.map((flight) => ({
-    flightNumber: `${flight.airlineCode.trim()} ${flight.flightNumber.trim()}`,
-    airlineCode: flight.airlineCode.trim(),
+  return allFlights
+    .map((flight) => {
+      const airlineCode = String(
+        flight.airlineCode || ""
+      ).trim();
 
-    airportName: flight.airport.trim(),
-    airportCode: undefined,
+      const flightNumber = String(
+        flight.flightNumber || ""
+      ).trim();
 
-    scheduledTime: flight.scheduledTime, 
+      const airportName = String(
+        flight.airport || ""
+      ).trim();
 
-    status: flight.status || undefined,
-    movementType: flight.movementType,
+      const scheduledTime = String(
+        flight.scheduledTime || ""
+      ).trim();
 
-    date: startOfDay, 
-  }));
+      const movementType =
+        flight.movementType === "ARRIVAL"
+          ? "ARRIVAL"
+          : "DEPARTURE";
+
+      // Skip bad rows with no flight number
+      if (!flightNumber) {
+        return null;
+      }
+
+      return {
+        flightNumber: `${airlineCode} ${flightNumber}`,
+        airlineCode,
+
+        airportName,
+        airportCode: undefined,
+
+        scheduledTime,
+
+        status: flight.status
+          ? String(flight.status).trim()
+          : undefined,
+
+        movementType,
+
+        date: startOfDay,
+      };
+    })
+    .filter(Boolean) as NormalizedFlight[];
 }

@@ -6,26 +6,27 @@ export function startFidsSyncJob() {
   let isRunning = false;
 
   cron.schedule(
-    "0 3 * * *", // 3:00 AM
+    "0 0-6 * * *", 
     async () => {
-          if (isRunning) {
-            console.log("Previous job still running, skipping...");
-            return;
-            }
+      if (isRunning) {
+        console.log("Previous job still running, skipping...");
+        return;
+      }
 
-            isRunning = true;
-            console.log("Running FIDS sync job...")
+      isRunning = true;
+      console.log("Running FIDS sync job...");
 
       try {
         await syncDailyFlightSchedule();
-        isRunning = false;
         console.log("FIDS sync completed");
       } catch (error) {
         console.error("FIDS sync failed:", error);
+      } finally {
+        isRunning = false; 
       }
     },
     {
-      timezone: "Africa/Lagos", 
+      timezone: "Africa/Lagos",
     }
   );
 }
