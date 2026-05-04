@@ -10,7 +10,7 @@ export default async function syncDailyFlightSchedule() {
       return;
     }
 
-    // ✅ Lagos operational day (stored as UTC equivalent)
+    //  Lagos operational day (stored as UTC equivalent)
     const now = new Date();
 
     const lagosNow = new Date(
@@ -30,13 +30,13 @@ export default async function syncDailyFlightSchedule() {
       )
     );
 
-    // 🔴 Clear ALL previous cache rows
+    //  Clear ALL previous cache rows
     await prisma.dailyFlightSchedule.deleteMany({});
 
-    // 🟢 Insert fresh rows for today only
+    //  Insert fresh rows for today only
     await prisma.dailyFlightSchedule.createMany({
       data: flights.map((flight) => ({
-        // ✅ FIDS already provides full flight number
+        //  FIDS already provides full flight number
         flightNumber: flight.flightNumber.trim(),
 
         airlineCode: flight.airlineCode.trim(),
@@ -56,11 +56,11 @@ export default async function syncDailyFlightSchedule() {
     });
 
     console.log(
-      `✅ Synced ${flights.length} flights for ${startOfDay.toISOString()}`
+      ` Synced ${flights.length} flights for ${startOfDay.toISOString()}`
     );
   } catch (error) {
     console.error(
-      "❌ Failed to sync DailyFlightSchedule:",
+      " Failed to sync DailyFlightSchedule:",
       error
     );
     throw error;

@@ -16,14 +16,14 @@ export default async function getDailyOperations(
     status?: "ON_TIME" | "MINOR_DELAY" | "DELAYED" | "PENDING";
   }
 ) {
-  // ✅ Clean incoming values
+  //  Clean incoming values
   const cleanDate = String(date).trim();
 
   if (!cleanDate) {
     throw new Error("Date is required");
   }
 
-  // ✅ Strict YYYY-MM-DD validation
+  //  Strict YYYY-MM-DD validation
   const dateMatch = cleanDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
   if (!dateMatch) {
@@ -34,7 +34,7 @@ export default async function getDailyOperations(
   const month = Number(dateMatch[2]);
   const day = Number(dateMatch[3]);
 
-  // ✅ Safe pagination defaults
+  //  Safe pagination defaults
   page = Number(page) || 1;
   limit = Number(limit) || 20;
 
@@ -43,7 +43,7 @@ export default async function getDailyOperations(
 
   const skip = (page - 1) * limit;
 
-  // ✅ Lagos operational day stored as UTC equivalent
+  //  Lagos operational day stored as UTC equivalent
   const startOfDay = new Date(
     Date.UTC(year, month - 1, day, -1, 0, 0)
   );
@@ -84,7 +84,7 @@ export default async function getDailyOperations(
     ];
   }
 
-  // ✅ Fetch schedules first (full set for accurate filtering)
+  //  Fetch schedules first (full set for accurate filtering)
   const schedules = await prisma.dailyFlightSchedule.findMany({
     where,
     orderBy: {
@@ -152,7 +152,7 @@ export default async function getDailyOperations(
     };
   });
 
-  // ✅ Status filtering
+  //  Status filtering
   const filteredData = filters?.status
     ? merged.filter(
         (row) =>
