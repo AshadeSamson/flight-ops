@@ -76,6 +76,7 @@ Common auth-related errors:
 - `ON_TIME`: delay is `0` or negative
 - `MINOR_DELAY`: delay is `1` to `15` minutes
 - `DELAYED`: delay is greater than `15` minutes
+- `CANCELLED`: can be set manually on upsert; when used, the backend stores `actualTime` as `null`.
 
 ## Common Validation Error Shape
 
@@ -183,9 +184,13 @@ Request body:
   "movementType": "ARRIVAL",
   "aircraftReg": "5N-BXX",
   "bayName": "BAY 04",
+  "airlineCode": "Q9",
+  "airportCode": "LOS",
+  "airportName": "Murtala Muhammed International Airport",
   "soulsOnBoard": 112,
   "scheduledTime": "09:30:00",
   "actualTime": "2026-04-15T09:42:00.000Z",
+  "delayStatus": "MINOR_DELAY",
   "date": "2026-04-15T00:00:00.000Z"
 }
 ```
@@ -197,10 +202,24 @@ Request field details:
 - `date`: required in practice for upsert.
 - `aircraftReg`: optional, looked up against aircraft registration number.
 - `bayName`: optional, looked up against bay name.
+- `airlineCode`: optional, looked up against airline code.
+- `airportCode`: optional, looked up against airport code.
+- `airportName`: optional fallback used to resolve the airport by name when `airportCode` is not available.
 - `soulsOnBoard`: optional integer, must be positive.
 - `scheduledTime`: optional by schema, but should be sent whenever creating a new record.
 - `actualTime`: optional ISO datetime string.
+- `delayStatus`: optional. Supports `ON_TIME`, `MINOR_DELAY`, `DELAYED`, `PENDING`, and `CANCELLED`.
 - `aircraftType`: accepted by validation schema but currently not used by the service.
+
+Resolution rules:
+
+- `airlineCode` is resolved in this order: request `airlineCode`, schedule `airlineCode`, then the first token from `flightNumber`.
+- If no airline code is resolved but a matched aircraft exists, the aircraft's airline is used.
+- `airportCode` is resolved first from the request, then from the schedule row for that day.
+- If no airport code is available, the backend tries `airportName` from the request, then schedule `airportName`.
+- The service looks up the matching schedule row for the same `flightNumber`, `movementType`, and Lagos day before resolving airline and airport fallbacks.
+- If `delayStatus` is sent as `CANCELLED`, the backend forces `actualTime` to `null` and stores `delayStatus` as `CANCELLED`.
+- For non-cancelled records, delay minutes and delay status are recalculated from `scheduledTime` and `actualTime` when `scheduledTime` is present.
 
 Success response: `200 OK`
 
@@ -211,9 +230,9 @@ Success response: `200 OK`
     "id": "clxop123",
     "flightNumber": "Q9123",
     "movementType": "ARRIVAL",
-    "airlineId": null,
+    "airlineId": "clxairl123",
     "aircraftId": "clxair123",
-    "airportId": null,
+    "airportId": "clxairp123",
     "bayId": "clxbay123",
     "soulsOnBoard": 112,
     "scheduledTime": "09:30:00",
@@ -270,6 +289,22 @@ Possible error responses:
 }
 ```
 
+- `404 Not Found`
+
+```json
+{
+  "message": "Airline not found"
+}
+```
+
+- `404 Not Found`
+
+```json
+{
+  "message": "Airport not found"
+}
+```
+
 - `500 Internal Server Error`
 
 ```json
@@ -283,6 +318,8 @@ Frontend notes:
 - Use this endpoint for inline table edits.
 - If you are creating a brand-new operation, send `scheduledTime` along with `flightNumber`, `movementType`, and `date`.
 - If `actualTime` is omitted, the backend will return `delayStatus` as `PENDING`.
+- If you want to mark a flight as cancelled, send `"delayStatus": "CANCELLED"`. The backend will clear `actualTime`.
+- You can now provide `airlineCode`, `airportCode`, or `airportName` explicitly instead of relying only on schedule-derived values.
 
 ### `GET /api/v1/flight-operations/schedule`
 
@@ -438,6 +475,114 @@ Frontend notes:
 - Prefer `PATCH /upsert` for the editable operations table.
 - `POST /` is better suited for manual or secondary workflows.
 - This endpoint returns the raw operation record as stored by Prisma.
+
+## Dashboard Summary Endpoint
+
+### `GET /api/v1/dashboard/today-summary`
+
+Returns the current Lagos-day dashboard summary for operations.
+
+Auth:
+
+- Requires `Authorization: Bearer <access_token>`.
+- Requires `ADMIN` or `SUPERVISOR` role.
+
+Request body:
+
+- None
+
+Success response: `200 OK`
+
+```json
+{
+  "message": "Dashboard summary retrieved successfully",
+  "data": {
+    "totalScheduled": 48,
+    "completed": 31,
+    "pending": 17,
+    "delayed": 6,
+    "arrivals": 24,
+    "departures": 24,
+    "statusBreakdown": {
+      "onTime": 18,
+      "minorDelay": 7,
+      "delayed": 6,
+      "cancelled": 2
+    },
+    "airlineBreakdown": [
+      {
+        "airlineId": "clxairl123",
+        "airlineName": "Air Peace",
+        "airlineCode": "P4",
+        "totalFlights": 10
+      },
+      {
+        "airlineId": null,
+        "airlineName": "Unknown",
+        "airlineCode": null,
+        "totalFlights": 3
+      }
+    ]
+  }
+}
+```
+
+Response field notes:
+
+- `completed` counts flight operations for today with non-null `actualTime`.
+- `pending` is computed as `totalScheduled - completed`.
+- `delayed` is the count of operations with `delayStatus` equal to `DELAYED`.
+- `statusBreakdown` provides counts for `ON_TIME`, `MINOR_DELAY`, `DELAYED`, and `CANCELLED`.
+- `airlineBreakdown` is grouped from saved `flightOperation` rows, not directly from the daily schedule table.
+- `airlineBreakdown[].airlineName` becomes `"Unknown"` and `airlineCode` becomes `null` when `airlineId` is not set on an operation.
+
+Frontend notes:
+
+- This endpoint uses the server's current Lagos day and does not accept a date query parameter.
+- `airlineBreakdown` only reflects operations that have been created or updated for today.
+- `totalScheduled`, `arrivals`, and `departures` come from the daily schedule table, so they can be higher than the total number of operation rows represented in `airlineBreakdown`.
+
+Possible error responses:
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized: Invalid token"
+}
+```
+
+- `403 Forbidden`
+
+```json
+{
+  "message": "Forbidden: Insufficient permissions"
+}
+```
+
+- `404 Not Found`
+
+```json
+{
+  "message": "User does not exist"
+}
+```
+
+- `500 Internal Server Error`
+
+```json
+{
+  "message": "Internal server error"
+}
+```
 
 ### `GET /api/v1/flight-operations/history`
 
