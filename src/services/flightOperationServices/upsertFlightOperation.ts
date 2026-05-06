@@ -21,7 +21,6 @@ export default async function upsertFlightOperation(
       });
     }
 
-    
     const {
       flightNumber,
       movementType,
@@ -33,6 +32,7 @@ export default async function upsertFlightOperation(
       soulsOnBoard,
       scheduledTime,
       actualTime,
+      delayStatus,
       date,
     } = result.data;
 
@@ -42,11 +42,13 @@ export default async function upsertFlightOperation(
       });
     }
 
-    //  Normalize Lagos day
+    // ✅ Normalize Lagos day
     const inputDate = new Date(date);
 
     const lagosDate = new Date(
-      inputDate.toLocaleString("en-US", { timeZone: "Africa/Lagos" })
+      inputDate.toLocaleString("en-US", {
+        timeZone: "Africa/Lagos",
+      })
     );
 
     const startOfDay = new Date(
@@ -69,13 +71,15 @@ export default async function upsertFlightOperation(
       },
     });
 
-    //  Map Aircraft
+    // ✅ Map Aircraft
     let aircraftId: string | undefined;
     let aircraftAirlineId: string | undefined;
 
     if (aircraftReg) {
       const aircraft = await prisma.aircraft.findFirst({
-        where: { registrationNumber: aircraftReg },
+        where: {
+          registrationNumber: aircraftReg,
+        },
       });
 
       if (!aircraft) {
@@ -88,12 +92,14 @@ export default async function upsertFlightOperation(
       aircraftAirlineId = aircraft.airlineId;
     }
 
-    //  Map Bay
+    // ✅ Map Bay
     let bayId: string | undefined;
 
     if (bayName) {
       const bay = await prisma.bay.findFirst({
-        where: { name: bayName },
+        where: {
+          name: bayName,
+        },
       });
 
       if (!bay) {
@@ -105,10 +111,13 @@ export default async function upsertFlightOperation(
       bayId = bay.id;
     }
 
-    // Map Airline
+    // ✅ Map Airline
     let airlineId: string | undefined;
 
-    const flightNumberParts = flightNumber.trim().split(/\s+/);
+    const flightNumberParts = flightNumber
+      .trim()
+      .split(/\s+/);
+
     const flightAirlineCode =
       flightNumberParts.length > 1
         ? flightNumberParts[0]?.toUpperCase()
@@ -121,7 +130,9 @@ export default async function upsertFlightOperation(
 
     if (resolvedAirlineCode) {
       const airline = await prisma.airline.findUnique({
-        where: { code: resolvedAirlineCode },
+        where: {
+          code: resolvedAirlineCode,
+        },
       });
 
       if (!airline) {
@@ -135,7 +146,7 @@ export default async function upsertFlightOperation(
       airlineId = aircraftAirlineId;
     }
 
-    // Map Airport
+    // ✅ Map Airport
     let airportId: string | undefined;
 
     const resolvedAirportCode =
@@ -143,11 +154,14 @@ export default async function upsertFlightOperation(
       schedule?.airportCode?.trim().toUpperCase();
 
     const resolvedAirportName =
-      airportName?.trim() || schedule?.airportName?.trim();
+      airportName?.trim() ||
+      schedule?.airportName?.trim();
 
     if (resolvedAirportCode) {
       const airport = await prisma.airport.findUnique({
-        where: { code: resolvedAirportCode },
+        where: {
+          code: resolvedAirportCode,
+        },
       });
 
       if (!airport) {
@@ -176,71 +190,120 @@ export default async function upsertFlightOperation(
       airportId = airport.id;
     }
 
-    //  Get user
+    // ✅ Get user
     const user = (req as any).user;
 
-    //  Build scheduled datetime (only if scheduledTime exists)
-    let delayMinutes: number | null = null;
-    let delayStatus: string | null = null;
+    // ✅ Delay / status handling
+    let calculatedDelayMinutes: number | null = null;
+    let calculatedDelayStatus: string | null = null;
 
-    if (scheduledTime) {
-      const scheduledDateTime = buildScheduledDateTime(
-        startOfDay,
-        scheduledTime
-      );
-
-      delayMinutes = calculateDelayMinutes(
-        scheduledDateTime,
-        actualTime ? new Date(actualTime) : undefined
-      );
-
-      delayStatus = getDelayStatus(delayMinutes);
+    // 🔴 Manual cancellation
+    if (delayStatus === "CANCELLED") {
+      calculatedDelayMinutes = null;
+      calculatedDelayStatus = "CANCELLED";
     }
 
-    //  TRUE UPSERT (atomic)
-    const operation = await prisma.flightOperation.upsert({
-      where: {
-        flightNumber_date_movementType: {
-          flightNumber,
-          date: startOfDay,
-          movementType,
+    // 🟢 Normal delay calculation
+    else if (scheduledTime) {
+      const scheduledDateTime =
+        buildScheduledDateTime(
+          startOfDay,
+          scheduledTime
+        );
+
+      calculatedDelayMinutes =
+        calculateDelayMinutes(
+          scheduledDateTime,
+          actualTime
+            ? new Date(actualTime)
+            : undefined
+        );
+
+      calculatedDelayStatus =
+        getDelayStatus(
+          calculatedDelayMinutes
+        );
+    }
+
+    // ✅ TRUE UPSERT
+    const operation =
+      await prisma.flightOperation.upsert({
+        where: {
+          flightNumber_date_movementType: {
+            flightNumber,
+            date: startOfDay,
+            movementType,
+          },
         },
-      },
-      update: {
-        ...(aircraftId && { aircraftId }),
-        ...(airlineId && { airlineId }),
-        ...(airportId && { airportId }),
-        ...(bayId && { bayId }),
-        ...(soulsOnBoard !== undefined && { soulsOnBoard }),
-        ...(scheduledTime && { scheduledTime }),
-        ...(actualTime && { actualTime: new Date(actualTime) }),
 
-        delayMinutes,
-        delayStatus,
-      },
-      create: {
-        flightNumber,
-        movementType,
-        date: startOfDay,
+        update: {
+          ...(aircraftId && { aircraftId }),
+          ...(airlineId && { airlineId }),
+          ...(airportId && { airportId }),
+          ...(bayId && { bayId }),
 
-        aircraftId,
-        airlineId,
-        airportId,
-        bayId,
-        soulsOnBoard,
+          ...(soulsOnBoard !== undefined && {
+            soulsOnBoard,
+          }),
 
-        scheduledTime: scheduledTime!,
-        actualTime: actualTime ? new Date(actualTime) : undefined,
+          ...(scheduledTime && {
+            scheduledTime,
+          }),
 
-        delayMinutes,
-        delayStatus,
+          ...(delayStatus === "CANCELLED"
+            ? {
+                actualTime: null,
+              }
+            : actualTime
+            ? {
+                actualTime: new Date(
+                  actualTime
+                ),
+              }
+            : {}),
 
-        createdById: user?.id,
-      },
-    });
+          delayMinutes:
+            calculatedDelayMinutes,
+
+          delayStatus:
+            calculatedDelayStatus,
+        },
+
+        create: {
+          flightNumber,
+          movementType,
+          date: startOfDay,
+
+          aircraftId,
+          airlineId,
+          airportId,
+          bayId,
+
+          soulsOnBoard,
+
+          scheduledTime:
+            scheduledTime!,
+
+          actualTime:
+            delayStatus === "CANCELLED"
+              ? null
+              : actualTime
+              ? new Date(actualTime)
+              : undefined,
+
+          delayMinutes:
+            calculatedDelayMinutes,
+
+          delayStatus:
+            calculatedDelayStatus,
+
+          createdById: user?.id,
+        },
+      });
 
     return res.status(200).json({
-      message: "Flight operation upserted successfully",
+      message:
+        "Flight operation upserted successfully",
       data: operation,
     });
   } catch (error) {
