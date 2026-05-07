@@ -1,4 +1,5 @@
 import { prisma } from "../../config/prisma";
+
 import buildOperationsMetrics from "../../lib/buildOperationsMetrics";
 
 export default async function getTodaySummary() {
@@ -54,6 +55,38 @@ export default async function getTodaySummary() {
       },
     });
 
+  // -----------------------------------
+  // AIRLINE LOOKUP
+  // -----------------------------------
+
+  const airlineCodes = [
+    ...new Set(
+      schedules
+        .map((s) => s.airlineCode)
+        .filter(Boolean)
+    ),
+  ] as string[];
+
+  const airlines =
+    await prisma.airline.findMany({
+      where: {
+        code: {
+          in: airlineCodes,
+        },
+      },
+    });
+
+  const airlineMap = new Map(
+    airlines.map((airline) => [
+      airline.code,
+      airline,
+    ])
+  );
+
+  // -----------------------------------
+  // OPERATION LOOKUP
+  // -----------------------------------
+
   const operationMap = new Map(
     operations.map((op) => [
       `${op.flightNumber}-${op.movementType}`,
@@ -68,12 +101,22 @@ export default async function getTodaySummary() {
           `${flight.flightNumber}-${flight.movementType}`
         );
 
+      const airline =
+        flight.airlineCode
+          ? airlineMap.get(
+              flight.airlineCode
+            )
+          : null;
+
       return {
         movementType:
           flight.movementType,
 
         airlineCode:
           flight.airlineCode,
+
+        airlineName:
+          airline?.name || null,
 
         delayStatus:
           operation?.delayStatus ||
@@ -82,6 +125,10 @@ export default async function getTodaySummary() {
         actualTime:
           operation?.actualTime ||
           null,
+
+        soulsOnBoard:
+          operation?.soulsOnBoard ||
+          0,
       };
     }
   );

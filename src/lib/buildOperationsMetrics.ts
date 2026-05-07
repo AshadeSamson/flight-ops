@@ -3,9 +3,13 @@ type FlightRow = {
 
   airlineCode?: string | null;
 
+  airlineName?: string | null;
+
   delayStatus?: string | null;
 
   actualTime?: Date | null;
+
+  soulsOnBoard?: number | null;
 };
 
 export default function buildOperationsMetrics(
@@ -32,6 +36,17 @@ export default function buildOperationsMetrics(
       row.movementType ===
       "DEPARTURE"
   ).length;
+
+  // -----------------------------------
+  // TOTAL SOB
+  // -----------------------------------
+
+  const totalSoulsOnBoard =
+    rows.reduce(
+      (sum, row) =>
+        sum + (row.soulsOnBoard || 0),
+      0
+    );
 
   // -----------------------------------
   // STATUS BREAKDOWN
@@ -70,11 +85,15 @@ export default function buildOperationsMetrics(
     {
       airlineCode: string;
 
+      airlineName: string | null;
+
       totalFlights: number;
 
       arrivals: number;
 
       departures: number;
+
+      totalSoulsOnBoard: number;
     }
   >();
 
@@ -86,11 +105,16 @@ export default function buildOperationsMetrics(
       airlineMap.set(code, {
         airlineCode: code,
 
+        airlineName:
+          row.airlineName || null,
+
         totalFlights: 0,
 
         arrivals: 0,
 
         departures: 0,
+
+        totalSoulsOnBoard: 0,
       });
     }
 
@@ -98,6 +122,9 @@ export default function buildOperationsMetrics(
       airlineMap.get(code)!;
 
     airline.totalFlights += 1;
+
+    airline.totalSoulsOnBoard +=
+      row.soulsOnBoard || 0;
 
     if (
       row.movementType === "ARRIVAL"
@@ -126,6 +153,8 @@ export default function buildOperationsMetrics(
     arrivals,
 
     departures,
+
+    totalSoulsOnBoard,
 
     statusBreakdown,
 
