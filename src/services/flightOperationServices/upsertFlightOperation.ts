@@ -38,7 +38,8 @@ export default async function upsertFlightOperation(
 
     if (!flightNumber || !movementType || !date) {
       return res.status(400).json({
-        message: "flightNumber, movementType and date are required",
+        message:
+          "flightNumber, movementType and date are required",
       });
     }
 
@@ -58,29 +59,48 @@ export default async function upsertFlightOperation(
     );
 
     const endOfDay = new Date(startOfDay);
+
     endOfDay.setDate(endOfDay.getDate() + 1);
 
-    const schedule = await prisma.dailyFlightSchedule.findFirst({
-      where: {
-        flightNumber,
-        movementType,
-        date: {
-          gte: startOfDay,
-          lt: endOfDay,
+    const schedule =
+      await prisma.dailyFlightSchedule.findFirst({
+        where: {
+          flightNumber,
+          movementType,
+
+          date: {
+            gte: startOfDay,
+            lt: endOfDay,
+          },
         },
-      },
-    });
+      });
+
+    // ✅ Resolve scheduled time
+    const resolvedScheduledTime =
+      scheduledTime ||
+      schedule?.scheduledTime;
+
+    if (!resolvedScheduledTime) {
+      return res.status(400).json({
+        message: "scheduledTime is required",
+      });
+    }
 
     // ✅ Map Aircraft
     let aircraftId: string | undefined;
-    let aircraftAirlineId: string | undefined;
+
+    let aircraftAirlineId:
+      | string
+      | undefined;
 
     if (aircraftReg) {
-      const aircraft = await prisma.aircraft.findFirst({
-        where: {
-          registrationNumber: aircraftReg,
-        },
-      });
+      const aircraft =
+        await prisma.aircraft.findFirst({
+          where: {
+            registrationNumber:
+              aircraftReg,
+          },
+        });
 
       if (!aircraft) {
         return res.status(404).json({
@@ -89,18 +109,21 @@ export default async function upsertFlightOperation(
       }
 
       aircraftId = aircraft.id;
-      aircraftAirlineId = aircraft.airlineId;
+
+      aircraftAirlineId =
+        aircraft.airlineId;
     }
 
     // ✅ Map Bay
     let bayId: string | undefined;
 
     if (bayName) {
-      const bay = await prisma.bay.findFirst({
-        where: {
-          name: bayName,
-        },
-      });
+      const bay =
+        await prisma.bay.findFirst({
+          where: {
+            name: bayName,
+          },
+        });
 
       if (!bay) {
         return res.status(404).json({
@@ -112,11 +135,12 @@ export default async function upsertFlightOperation(
     }
 
     // ✅ Map Airline
-    let airlineId: string | undefined;
+    let airlineId:
+      | string
+      | undefined;
 
-    const flightNumberParts = flightNumber
-      .trim()
-      .split(/\s+/);
+    const flightNumberParts =
+      flightNumber.trim().split(/\s+/);
 
     const flightAirlineCode =
       flightNumberParts.length > 1
@@ -125,15 +149,18 @@ export default async function upsertFlightOperation(
 
     const resolvedAirlineCode =
       airlineCode?.trim().toUpperCase() ||
-      schedule?.airlineCode?.trim().toUpperCase() ||
+      schedule?.airlineCode
+        ?.trim()
+        .toUpperCase() ||
       flightAirlineCode;
 
     if (resolvedAirlineCode) {
-      const airline = await prisma.airline.findUnique({
-        where: {
-          code: resolvedAirlineCode,
-        },
-      });
+      const airline =
+        await prisma.airline.findUnique({
+          where: {
+            code: resolvedAirlineCode,
+          },
+        });
 
       if (!airline) {
         return res.status(404).json({
@@ -147,22 +174,27 @@ export default async function upsertFlightOperation(
     }
 
     // ✅ Map Airport
-    let airportId: string | undefined;
+    let airportId:
+      | string
+      | undefined;
 
     const resolvedAirportCode =
       airportCode?.trim().toUpperCase() ||
-      schedule?.airportCode?.trim().toUpperCase();
+      schedule?.airportCode
+        ?.trim()
+        .toUpperCase();
 
     const resolvedAirportName =
       airportName?.trim() ||
       schedule?.airportName?.trim();
 
     if (resolvedAirportCode) {
-      const airport = await prisma.airport.findUnique({
-        where: {
-          code: resolvedAirportCode,
-        },
-      });
+      const airport =
+        await prisma.airport.findUnique({
+          where: {
+            code: resolvedAirportCode,
+          },
+        });
 
       if (!airport) {
         return res.status(404).json({
@@ -172,14 +204,16 @@ export default async function upsertFlightOperation(
 
       airportId = airport.id;
     } else if (resolvedAirportName) {
-      const airport = await prisma.airport.findFirst({
-        where: {
-          name: {
-            equals: resolvedAirportName,
-            mode: "insensitive",
+      const airport =
+        await prisma.airport.findFirst({
+          where: {
+            name: {
+              equals:
+                resolvedAirportName,
+              mode: "insensitive",
+            },
           },
-        },
-      });
+        });
 
       if (!airport) {
         return res.status(404).json({
@@ -194,21 +228,28 @@ export default async function upsertFlightOperation(
     const user = (req as any).user;
 
     // ✅ Delay / status handling
-    let calculatedDelayMinutes: number | null = null;
-    let calculatedDelayStatus: string | null = null;
+    let calculatedDelayMinutes:
+      | number
+      | null = null;
+
+    let calculatedDelayStatus:
+      | string
+      | null = null;
 
     // 🔴 Manual cancellation
     if (delayStatus === "CANCELLED") {
       calculatedDelayMinutes = null;
-      calculatedDelayStatus = "CANCELLED";
+
+      calculatedDelayStatus =
+        "CANCELLED";
     }
 
     // 🟢 Normal delay calculation
-    else if (scheduledTime) {
+    else {
       const scheduledDateTime =
         buildScheduledDateTime(
           startOfDay,
-          scheduledTime
+          resolvedScheduledTime
         );
 
       calculatedDelayMinutes =
@@ -229,36 +270,48 @@ export default async function upsertFlightOperation(
     const operation =
       await prisma.flightOperation.upsert({
         where: {
-          flightNumber_date_movementType: {
-            flightNumber,
-            date: startOfDay,
-            movementType,
-          },
+          flightNumber_date_movementType:
+            {
+              flightNumber,
+              date: startOfDay,
+              movementType,
+            },
         },
 
         update: {
-          ...(aircraftId && { aircraftId }),
-          ...(airlineId && { airlineId }),
-          ...(airportId && { airportId }),
-          ...(bayId && { bayId }),
+          ...(aircraftId && {
+            aircraftId,
+          }),
 
-          ...(soulsOnBoard !== undefined && {
+          ...(airlineId && {
+            airlineId,
+          }),
+
+          ...(airportId && {
+            airportId,
+          }),
+
+          ...(bayId && {
+            bayId,
+          }),
+
+          ...(soulsOnBoard !==
+            undefined && {
             soulsOnBoard,
           }),
 
-          ...(scheduledTime && {
-            scheduledTime,
-          }),
+          scheduledTime:
+            resolvedScheduledTime,
 
-          ...(delayStatus === "CANCELLED"
+          ...(delayStatus ===
+          "CANCELLED"
             ? {
                 actualTime: null,
               }
             : actualTime
             ? {
-                actualTime: new Date(
-                  actualTime
-                ),
+                actualTime:
+                  new Date(actualTime),
               }
             : {}),
 
@@ -271,21 +324,27 @@ export default async function upsertFlightOperation(
 
         create: {
           flightNumber,
+
           movementType,
+
           date: startOfDay,
 
           aircraftId,
+
           airlineId,
+
           airportId,
+
           bayId,
 
           soulsOnBoard,
 
           scheduledTime:
-            scheduledTime!,
+            resolvedScheduledTime,
 
           actualTime:
-            delayStatus === "CANCELLED"
+            delayStatus ===
+            "CANCELLED"
               ? null
               : actualTime
               ? new Date(actualTime)
@@ -304,6 +363,7 @@ export default async function upsertFlightOperation(
     return res.status(200).json({
       message:
         "Flight operation upserted successfully",
+
       data: operation,
     });
   } catch (error) {
