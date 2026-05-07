@@ -47,5 +47,15 @@ export const updateFlightOperationSchema = z.object({
 
   actualTime: z.string().datetime().optional(),
 
+  delayStatus: z
+  .enum([
+    "ON_TIME",
+    "MINOR_DELAY",
+    "DELAYED",
+    "PENDING",
+    "CANCELLED",
+  ])
+  .optional(),
+
   date: dateSchema.optional(),
 });
