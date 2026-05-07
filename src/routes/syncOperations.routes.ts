@@ -8,6 +8,13 @@ import requireAuth from "../middleware/requireAuth";
 
 const router = Router();
 
+
+
+router.post("/refresh", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(controller.refresh));
 router.post("/", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(controller.sync));
 
 export default router;
+
+
+
+

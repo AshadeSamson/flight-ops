@@ -29,18 +29,40 @@ export default async function getFlightOperationsHistory(
 
   const skip = (page - 1) * limit;
 
+  const [startYear, startMonth, startDay] =
+    startDate.split("-").map(Number);
+
+  const [endYear, endMonth, endDay] =
+    endDate.split("-").map(Number);
+
+  // ✅ Lagos midnight stored as UTC equivalent
   const start = new Date(
-    `${startDate}T00:00:00.000Z`
+    Date.UTC(
+      startYear,
+      startMonth - 1,
+      startDay,
+      -1,
+      0,
+      0
+    )
   );
 
+  // ✅ Next Lagos midnight
   const end = new Date(
-    `${endDate}T23:59:59.999Z`
+    Date.UTC(
+      endYear,
+      endMonth - 1,
+      endDay + 1,
+      -1,
+      0,
+      0
+    )
   );
 
   const where: any = {
     date: {
       gte: start,
-      lte: end,
+      lt: end,
     },
   };
 
