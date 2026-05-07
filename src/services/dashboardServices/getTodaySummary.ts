@@ -1,4 +1,5 @@
 import { prisma } from "../../config/prisma";
+import buildOperationsMetrics from "../../lib/buildOperationsMetrics";
 
 export default async function getTodaySummary() {
   const now = new Date();
@@ -20,7 +21,10 @@ export default async function getTodaySummary() {
     )
   );
 
-  const endOfDay = new Date(startOfDay);
+  const endOfDay = new Date(
+    startOfDay
+  );
+
   endOfDay.setUTCDate(
     endOfDay.getUTCDate() + 1
   );
@@ -30,166 +34,82 @@ export default async function getTodaySummary() {
     lt: endOfDay,
   };
 
-  const [
-    totalScheduled,
-    completed,
-    delayed,
-    arrivals,
-    departures,
+  // -----------------------------------
+  // CURRENT DAILY BOARD
+  // -----------------------------------
 
-    // ✅ Status breakdown
-    onTimeCount,
-    minorDelayCount,
-    delayedCount,
-    cancelledCount,
-
-    // ✅ Airline breakdown
-    airlineBreakdown,
-  ] = await Promise.all([
-    prisma.dailyFlightSchedule.count({
-      where: {
-        date: whereDate,
-      },
-    }),
-
-    prisma.flightOperation.count({
-      where: {
-        date: whereDate,
-        actualTime: {
-          not: null,
+  const schedules =
+    await prisma.dailyFlightSchedule.findMany(
+      {
+        where: {
+          date: whereDate,
         },
-      },
-    }),
+      }
+    );
 
-    prisma.flightOperation.count({
+  const operations =
+    await prisma.flightOperation.findMany({
       where: {
         date: whereDate,
-        delayStatus: "DELAYED",
-      },
-    }),
-
-    prisma.dailyFlightSchedule.count({
-      where: {
-        date: whereDate,
-        movementType: "ARRIVAL",
-      },
-    }),
-
-    prisma.dailyFlightSchedule.count({
-      where: {
-        date: whereDate,
-        movementType: "DEPARTURE",
-      },
-    }),
-
-    // ✅ ON_TIME
-    prisma.flightOperation.count({
-      where: {
-        date: whereDate,
-        delayStatus: "ON_TIME",
-      },
-    }),
-
-    // ✅ MINOR_DELAY
-    prisma.flightOperation.count({
-      where: {
-        date: whereDate,
-        delayStatus: "MINOR_DELAY",
-      },
-    }),
-
-    // ✅ DELAYED
-    prisma.flightOperation.count({
-      where: {
-        date: whereDate,
-        delayStatus: "DELAYED",
-      },
-    }),
-
-    // ✅ CANCELLED
-    prisma.flightOperation.count({
-      where: {
-        date: whereDate,
-        delayStatus: "CANCELLED",
-      },
-    }),
-
-    // ✅ Airline breakdown
-    prisma.flightOperation.groupBy({
-      by: ["airlineId"],
-
-      where: {
-        date: whereDate,
-      },
-
-      _count: {
-        airlineId: true,
-      },
-    }),
-  ]);
-
-  // ✅ Resolve airline names
-  const airlineIds = airlineBreakdown
-    .map((item) => item.airlineId)
-    .filter(Boolean) as string[];
-
-  const airlines =
-    await prisma.airline.findMany({
-      where: {
-        id: {
-          in: airlineIds,
-        },
       },
     });
 
-  const airlineMap = new Map(
-    airlines.map((airline) => [
-      airline.id,
-      airline,
+  const operationMap = new Map(
+    operations.map((op) => [
+      `${op.flightNumber}-${op.movementType}`,
+      op,
     ])
   );
 
-  const formattedAirlineBreakdown =
-    airlineBreakdown.map((item) => {
-      const airline = item.airlineId
-        ? airlineMap.get(item.airlineId)
-        : null;
+  const currentRows = schedules.map(
+    (flight) => {
+      const operation =
+        operationMap.get(
+          `${flight.flightNumber}-${flight.movementType}`
+        );
 
       return {
-        airlineId: item.airlineId,
-        airlineName:
-          airline?.name || "Unknown",
+        movementType:
+          flight.movementType,
+
         airlineCode:
-          airline?.code || null,
-        totalFlights:
-          item._count.airlineId,
+          flight.airlineCode,
+
+        delayStatus:
+          operation?.delayStatus ||
+          "PENDING",
+
+        actualTime:
+          operation?.actualTime ||
+          null,
       };
-    });
+    }
+  );
+
+  // -----------------------------------
+  // ARCHIVE BOARD
+  // -----------------------------------
+
+  const archiveRows =
+    await prisma.archivedDailyOperation.findMany();
+
+  // -----------------------------------
+  // BUILD METRICS
+  // -----------------------------------
+
+  const currentDay =
+    buildOperationsMetrics(
+      currentRows
+    );
+
+  const archiveDay =
+    buildOperationsMetrics(
+      archiveRows
+    );
 
   return {
-    totalScheduled,
+    currentDay,
 
-    completed,
-
-    pending:
-      totalScheduled - completed,
-
-    delayed,
-
-    arrivals,
-
-    departures,
-
-    // ✅ Status breakdown
-    statusBreakdown: {
-      onTime: onTimeCount,
-      minorDelay: minorDelayCount,
-      delayed: delayedCount,
-      cancelled: cancelledCount,
-    },
-
-    // ✅ Airline breakdown
-    airlineBreakdown:
-      formattedAirlineBreakdown,
+    archiveDay,
   };
 }
