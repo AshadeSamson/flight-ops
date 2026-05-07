@@ -160,3 +160,36 @@ model DailyFlightSchedule {
   @@unique([flightNumber, date, movementType])
   @@index([date])
 }
+
+model ArchivedDailyOperation {
+  id String @id @default(cuid())
+
+  snapshotDate DateTime
+
+  flightNumber String
+
+  movementType MovementType
+
+  airlineCode String?
+  airportName String
+
+  scheduledTime String
+
+  operationId String?
+
+  soulsOnBoard Int?
+
+  actualTime DateTime?
+
+  aircraftReg String?
+  aircraftType String?
+
+  bayName String?
+
+  delayMinutes Int?
+  delayStatus String?
+
+  createdAt DateTime @default(now())
+
+  @@index([snapshotDate])
+}

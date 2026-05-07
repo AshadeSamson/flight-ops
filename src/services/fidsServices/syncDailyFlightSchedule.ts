@@ -1,5 +1,6 @@
 import { prisma } from "../../config/prisma";
 import getNormalizedFidsData from "./getNormalizedFidsData";
+import createArchiveSnapshot from "../flightOperationServices/createArchiveSnapshot";
 
 export default async function syncDailyFlightSchedule() {
   try {
@@ -29,6 +30,13 @@ export default async function syncDailyFlightSchedule() {
         0
       )
     );
+
+    const existingFlights =
+      await prisma.dailyFlightSchedule.count();
+
+    if (existingFlights > 0) {
+      await createArchiveSnapshot();
+    }
 
     //  Clear ALL previous cache rows
     await prisma.dailyFlightSchedule.deleteMany({});
