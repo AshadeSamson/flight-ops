@@ -6,6 +6,6 @@ import { getTodaySummaryHandler } from "../controllers/dashboard/dashboard.contr
 
 const router = Router();
 
-router.get("/today-summary", requireAuth, requireRole("ADMIN", "SUPERVISOR"), asyncHandler(getTodaySummaryHandler));
+router.get("/today-summary", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(getTodaySummaryHandler));
 
 export default router;
