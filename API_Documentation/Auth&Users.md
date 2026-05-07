@@ -12,7 +12,7 @@ Base path:
 
 ## Authentication Overview
 
-Protected user endpoints require this header:
+Protected endpoints require:
 
 ```http
 Authorization: Bearer <access_token>
@@ -20,16 +20,15 @@ Authorization: Bearer <access_token>
 
 Access token notes:
 
-- Returned by the login endpoint.
+- Returned by `POST /api/v1/auth/login`.
 - JWT expires in `12h`.
-- `GET /api/v1/auth/me` returns the currently authenticated user from the access token lookup flow.
-- User management endpoints other than `GET /users/profile` are restricted to `ADMIN`.
+- `GET /api/v1/auth/me` is the main session-rehydration endpoint for the frontend.
+- User management endpoints other than `GET /api/v1/users/profile` are restricted to `ADMIN`.
+- Dashboard summary is restricted to `ADMIN` and `SUPERVISOR`.
 
-## Common Error Response Shapes
+## Common Error Shapes
 
-These are the main error formats currently returned by the codebase.
-
-### Basic message error
+### Basic auth or access error
 
 ```json
 {
@@ -37,7 +36,7 @@ These are the main error formats currently returned by the codebase.
 }
 ```
 
-### Validation error with flattened Zod errors
+### Validation error with flattened Zod output
 
 ```json
 {
@@ -53,14 +52,14 @@ These are the main error formats currently returned by the codebase.
 }
 ```
 
-### Validation error with fieldErrors only
+### Validation error with field errors only
 
 ```json
 {
   "message": "Invalid input data",
   "errors": {
-    "email": [
-      "Invalid email"
+    "password": [
+      "String must contain at least 8 character(s)"
     ]
   }
 }
@@ -70,7 +69,7 @@ These are the main error formats currently returned by the codebase.
 
 ### `POST /api/v1/auth/login`
 
-Authenticate a user and return an access token.
+Authenticates a user and returns an access token.
 
 Request body:
 
@@ -186,11 +185,11 @@ Possible error responses:
 Frontend note:
 
 - The reset email contains a link like `/reset-password?token=<jwt_token>`.
-- The frontend reset-password page should read the `token` from the query string and send it to the password reset endpoint below.
+- The frontend reset-password page should extract the `token` from the query string and send it to the password reset endpoint.
 
 ### `POST /api/v1/auth/password-reset`
 
-Reset a user's password using the token from the reset email.
+Resets a password using the token from the reset email.
 
 Request body:
 
@@ -204,7 +203,7 @@ Request body:
 Validation rules:
 
 - `token`: required string.
-- `password`: required, minimum length is `8`.
+- `password`: required, minimum length `8`.
 
 Success response: `200 OK`
 
@@ -278,17 +277,16 @@ Success response: `200 OK`
     "id": "clx123456789",
     "role": "ADMIN",
     "email": "admin@example.com",
-    "name": "John Doe",
-    "isEmailVerified": true
+    "name": "John Doe"
   }
 }
 ```
 
 Frontend notes:
 
-- This is the best endpoint for restoring the logged-in user after app refresh.
-- The current implementation returns `id`, `role`, `email`, `name`, and `isEmailVerified`.
-- Unlike the login response, this endpoint does not currently return `staffId`.
+- Use this endpoint to restore the logged-in user after app refresh.
+- The current implementation returns `id`, `role`, `email`, and `name`.
+- It does not currently return `staffId`.
 
 Possible error responses:
 
@@ -308,14 +306,6 @@ Possible error responses:
 }
 ```
 
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized: Invalid token version"
-}
-```
-
 - `404 Not Found`
 
 ```json
@@ -328,7 +318,7 @@ Possible error responses:
 
 ### `GET /api/v1/users/profile`
 
-Returns the currently authenticated user's profile.
+Returns the current authenticated user's profile.
 
 Auth:
 
@@ -353,7 +343,7 @@ Success response: `200 OK`
 Frontend note:
 
 - The service attempts to return `staffId`, but the current auth middleware does not attach `staffId` to `req.user`.
-- For frontend integration, treat `staffId` on this endpoint as currently unreliable or absent unless the backend is updated.
+- Treat `staffId` on this endpoint as unreliable or absent unless the backend middleware is updated.
 
 Possible error responses:
 
@@ -370,14 +360,6 @@ Possible error responses:
 ```json
 {
   "message": "Unauthorized: Invalid token"
-}
-```
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized: Invalid token version"
 }
 ```
 
@@ -399,12 +381,12 @@ Possible error responses:
 
 ### `POST /api/v1/users`
 
-Create a new user.
+Creates a new user.
 
 Auth:
 
 - Requires `Authorization: Bearer <access_token>`.
-- Requires `ADMIN` role.
+- Requires `ADMIN`.
 
 Request body:
 
@@ -420,11 +402,11 @@ Request body:
 
 Validation rules:
 
-- `name`: required, minimum length is `3`.
-- `email`: required, must be a valid email.
-- `password`: required, minimum length is `8`.
+- `name`: required, minimum length `3`.
+- `email`: required, valid email.
+- `password`: required, minimum length `8`.
 - `role`: required, one of `ADMIN`, `SUPERVISOR`, `OPS_STAFF`.
-- `staffId`: required string, must match `BASL/ID/########` with 8 to 10 digits.
+- `staffId`: required, must match `BASL/ID/########` with 8 to 10 digits.
 
 Normalization:
 
@@ -496,33 +478,19 @@ Possible error responses:
 }
 ```
 
-- `500 Internal Server Error`
-
-```json
-{
-  "message": "Internal server error"
-}
-```
-
 ### `GET /api/v1/users`
 
-Fetch a paginated list of users.
+Returns a paginated list of users.
 
 Auth:
 
 - Requires `Authorization: Bearer <access_token>`.
-- Requires `ADMIN` role.
+- Requires `ADMIN`.
 
 Query parameters:
 
-- `page`: optional, default is `1`.
-- `limit`: optional, default is `10`, maximum is `50`.
-
-Example request:
-
-```text
-GET /api/v1/users?page=1&limit=10
-```
+- `page`: optional, default `1`.
+- `limit`: optional, default `10`, maximum `50`.
 
 Success response: `200 OK`
 
@@ -565,26 +533,18 @@ Possible error responses:
 }
 ```
 
-- `500 Internal Server Error`
-
-```json
-{
-  "message": "Internal server error"
-}
-```
-
 ### `GET /api/v1/users/:id`
 
-Fetch a single user by ID.
+Returns one user by ID.
 
 Auth:
 
 - Requires `Authorization: Bearer <access_token>`.
-- Requires `ADMIN` role.
+- Requires `ADMIN`.
 
 Path params:
 
-- `id`: required user ID.
+- `id`: user ID.
 
 Success response: `200 OK`
 
@@ -635,30 +595,20 @@ Possible error responses:
 }
 ```
 
-- `500 Internal Server Error`
-
-```json
-{
-  "message": "Internal server error"
-}
-```
-
 ### `PATCH /api/v1/users/:id`
 
-Update a user. This endpoint supports partial updates.
+Partially updates a user.
 
 Auth:
 
 - Requires `Authorization: Bearer <access_token>`.
-- Requires `ADMIN` role.
+- Requires `ADMIN`.
 
 Path params:
 
-- `id`: required user ID.
+- `id`: user ID.
 
 Request body:
-
-All fields are optional, but at least one field should be sent by the frontend.
 
 ```json
 {
@@ -670,18 +620,15 @@ All fields are optional, but at least one field should be sent by the frontend.
 }
 ```
 
+All fields are optional.
+
 Validation rules:
 
-- `name`: optional, minimum length is `3`.
-- `email`: optional, must be a valid email.
-- `password`: optional, minimum length is `8`.
+- `name`: optional, minimum length `3`.
+- `email`: optional, valid email.
+- `password`: optional, minimum length `8`.
 - `role`: optional, one of `ADMIN`, `SUPERVISOR`, `OPS_STAFF`.
-- `staffId`: optional, if provided must match `BASL/ID/########` with 8 to 10 digits.
-
-Normalization:
-
-- `email` is saved in lowercase.
-- `staffId` is saved in uppercase.
+- `staffId`: optional, must match `BASL/ID/########` with 8 to 10 digits.
 
 Success response: `200 OK`
 
@@ -753,24 +700,16 @@ Possible error responses:
 }
 ```
 
-- `500 Internal Server Error`
-
-```json
-{
-  "message": "Internal server error"
-}
-```
-
 ## Dashboard Endpoints
 
 ### `GET /api/v1/dashboard/today-summary`
 
-Returns today's dashboard summary counts based on the Lagos day.
+Returns dashboard summary data for the current Lagos day and the latest archived snapshot.
 
 Auth:
 
 - Requires `Authorization: Bearer <access_token>`.
-- Requires `ADMIN` or `SUPERVISOR` role.
+- Requires `ADMIN` or `SUPERVISOR`.
 
 Request body:
 
@@ -782,29 +721,75 @@ Success response: `200 OK`
 {
   "message": "Dashboard summary retrieved successfully",
   "data": {
-    "totalScheduled": 48,
-    "completed": 31,
-    "pending": 17,
-    "delayed": 6,
-    "arrivals": 24,
-    "departures": 24
+    "currentDay": {
+      "totalScheduled": 48,
+      "completed": 31,
+      "pending": 17,
+      "delayed": 6,
+      "arrivals": 24,
+      "departures": 24,
+      "statusBreakdown": {
+        "onTime": 18,
+        "minorDelay": 7,
+        "delayed": 6,
+        "cancelled": 2
+      },
+      "airlineBreakdown": [
+        {
+          "airlineCode": "P4",
+          "totalFlights": 10,
+          "arrivals": 6,
+          "departures": 4
+        },
+        {
+          "airlineCode": "UNKNOWN",
+          "totalFlights": 3,
+          "arrivals": 2,
+          "departures": 1
+        }
+      ]
+    },
+    "archiveDay": {
+      "totalScheduled": 45,
+      "completed": 28,
+      "pending": 17,
+      "delayed": 5,
+      "arrivals": 22,
+      "departures": 23,
+      "statusBreakdown": {
+        "onTime": 17,
+        "minorDelay": 6,
+        "delayed": 5,
+        "cancelled": 1
+      },
+      "airlineBreakdown": [
+        {
+          "airlineCode": "P4",
+          "totalFlights": 9,
+          "arrivals": 5,
+          "departures": 4
+        }
+      ]
+    }
   }
 }
 ```
 
 Response field notes:
 
-- `totalScheduled`: total number of scheduled flights for today.
-- `completed`: number of flight operations for today with a non-null `actualTime`.
-- `pending`: `totalScheduled - completed`.
-- `delayed`: number of flight operations for today with `delayStatus` equal to `DELAYED`.
-- `arrivals`: total number of scheduled arrival flights for today.
-- `departures`: total number of scheduled departure flights for today.
+- `currentDay` is built from today's `dailyFlightSchedule` rows merged with matching live operations.
+- `archiveDay` is built from the current contents of `archivedDailyOperation`.
+- Each day block contains:
+- `totalScheduled`, `completed`, `pending`, `delayed`, `arrivals`, and `departures`
+- `statusBreakdown`: `onTime`, `minorDelay`, `delayed`, `cancelled`
+- `airlineBreakdown`: grouped by `airlineCode` with `totalFlights`, `arrivals`, and `departures`
+- Missing airline codes are grouped under `UNKNOWN`.
 
 Frontend notes:
 
 - This endpoint does not take query parameters.
-- The summary is computed using the current Lagos day on the server, not a date supplied by the client.
+- It uses the server's current Lagos day.
+- `archiveDay` reflects the latest archived snapshot, not a multi-day history.
 
 Possible error responses:
 
@@ -813,6 +798,14 @@ Possible error responses:
 ```json
 {
   "message": "Unauthorized"
+}
+```
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized: Invalid token"
 }
 ```
 
@@ -832,21 +825,11 @@ Possible error responses:
 }
 ```
 
-- `500 Internal Server Error`
-
-```json
-{
-  "message": "Internal server error"
-}
-```
-
 ## Frontend Integration Notes
 
 - Store the login `token` and send it as a Bearer token on protected requests.
 - Use `GET /api/v1/auth/me` to rehydrate the current user session on app load.
-- `forgot-password` should always show a neutral success message, even when the email does not exist.
-- `password-reset` requires the `token` from the reset link query string.
-- `GET /api/v1/dashboard/today-summary` is available only to `ADMIN` and `SUPERVISOR`.
-- User list responses are paginated and include `meta.total`, `meta.page`, `meta.limit`, and `meta.totalPages`.
-- Role values used by the backend are exactly `ADMIN`, `SUPERVISOR`, and `OPS_STAFF`.
-- `staffId` format expected by validation is `BASL/ID/12345678` and accepts 8 to 10 digits after the final slash.
+- `forgot-password` should always show a neutral success state even when the email does not exist.
+- `password-reset` requires the token from the reset link query string.
+- Role values are exactly `ADMIN`, `SUPERVISOR`, and `OPS_STAFF`.
+- `staffId` format is `BASL/ID/12345678` with 8 to 10 digits after the final slash.
