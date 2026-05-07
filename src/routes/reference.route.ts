@@ -36,9 +36,9 @@ router.patch("/airlines/:id", requireAuth, requireRole("ADMIN"), asyncHandler(up
 router.delete("/airlines/:id", requireAuth, requireRole("ADMIN"), asyncHandler(deleteAirlineHandler));
 
 
-router.post("/aircrafts",requireAuth,requireRole("ADMIN"),asyncHandler(createAircraftHandler));
-router.patch("/aircrafts/:id",requireAuth,requireRole("ADMIN"),asyncHandler(updateAircraftHandler));
-router.delete("/aircrafts/:id",requireAuth,requireRole("ADMIN"),asyncHandler(deleteAircraftHandler));
+router.post("/aircrafts",requireAuth,requireRole("ADMIN", "SUPERVISOR"),asyncHandler(createAircraftHandler));
+router.patch("/aircrafts/:id",requireAuth,requireRole("ADMIN", "SUPERVISOR"),asyncHandler(updateAircraftHandler));
+router.delete("/aircrafts/:id",requireAuth,requireRole("ADMIN", "SUPERVISOR"),asyncHandler(deleteAircraftHandler));
 
 
 router.post("/bays", requireAuth, requireRole("ADMIN"), asyncHandler(createBayHandler));
