@@ -9,6 +9,7 @@ import errorHandler from './middleware/errorHandler';
 import { generalLimiter } from './middleware/rateLimiter';
 import archiveRoutes from './routes/archive.routes';
 import syncOperationsRoutes from './routes/syncOperations.routes';
+import auditRoutes from './routes/audit.route';
 
 const app = express();
 
@@ -36,6 +37,8 @@ app.use("/api/v1/ref", referenceRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/archive-operations", archiveRoutes);
 app.use("/api/v1/operations/sync-day", syncOperationsRoutes);
+app.use("/api/v1/audit-logs", auditRoutes);
+
 
 // Global error handler (should be after routes)
 app.use(errorHandler);

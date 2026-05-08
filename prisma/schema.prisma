@@ -40,6 +40,7 @@ model User {
   role    UserRole
 
   flightOperations FlightOperation[]
+  auditLogs AuditLog[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -192,4 +193,31 @@ model ArchivedDailyOperation {
   createdAt DateTime @default(now())
 
   @@index([snapshotDate])
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  action String
+  module String
+
+  description String?
+
+  entityType String?
+  entityId   String?
+
+  metadata Json?
+
+  ipAddress String?
+  userAgent String?
+
+  userId String?
+  user   User? @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([module])
+  @@index([action])
+  @@index([userId])
 }
