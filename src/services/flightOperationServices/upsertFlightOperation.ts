@@ -6,6 +6,7 @@ import {
   calculateDelayMinutes,
   getDelayStatus,
 } from "../../utils/flightMetrics";
+import createAuditLog from "../auditServices/createAuditLog";
 
 export default async function upsertFlightOperation(
   req: Request,
@@ -309,6 +310,56 @@ export default async function upsertFlightOperation(
 
           createdById: user?.id,
         },
+      });
+
+        // ✅ Non-blocking Audit Log
+    createAuditLog({
+        userId: user?.id,
+
+        action:
+          delayStatus === "CANCELLED"
+            ? "CANCEL_OPERATION"
+            : "UPSERT_OPERATION",
+
+        module: "FLIGHT_OPERATIONS",
+
+        description:
+          delayStatus === "CANCELLED"
+            ? `Cancelled flight ${flightNumber}`
+            : `Updated flight ${flightNumber}`,
+
+        entityType: "FlightOperation",
+
+        entityId: operation.id,
+
+        metadata: {
+          flightNumber,
+          movementType,
+
+          airlineCode:
+            resolvedAirlineCode,
+
+          airportCode:
+            resolvedAirportCode,
+
+          soulsOnBoard,
+
+          delayStatus:
+            calculatedDelayStatus,
+
+          delayMinutes:
+            calculatedDelayMinutes,
+        },
+
+        ipAddress: req.ip,
+
+        userAgent:
+          req.headers["user-agent"],
+      }).catch((error) => {
+        console.error(
+          "Audit log failed:",
+          error
+        );
       });
 
     return res.status(200).json({
