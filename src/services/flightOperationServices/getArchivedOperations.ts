@@ -2,27 +2,188 @@ import { prisma } from "../../config/prisma";
 
 export default async function getArchivedOperations(
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
+
+  filters?: {
+    movementType?: "ARRIVAL" | "DEPARTURE";
+
+    airlineCode?: string;
+
+    search?: string;
+
+    status?:
+      | "ON_TIME"
+      | "MINOR_DELAY"
+      | "DELAYED"
+      | "PENDING"
+      | "CANCELLED";
+
+    startDate?: string;
+
+    endDate?: string;
+  }
 ) {
+  // ✅ Safe pagination
   page = Number(page) || 1;
 
   limit = Number(limit) || 20;
 
+  if (page < 1) page = 1;
+
+  if (limit < 1) limit = 20;
+
   const skip = (page - 1) * limit;
 
-  const total =
-    await prisma.archivedDailyOperation.count();
+  // -----------------------------------
+  // WHERE FILTERS
+  // -----------------------------------
 
-  const data =
-    await prisma.archivedDailyOperation.findMany({
-      orderBy: {
-        scheduledTime: "asc",
+  const where: any = {};
+
+  // ✅ Movement type
+  if (filters?.movementType) {
+    where.movementType =
+      filters.movementType;
+  }
+
+  // ✅ Airline
+  if (filters?.airlineCode) {
+    where.airlineCode = {
+      equals:
+        filters.airlineCode.toUpperCase(),
+      mode: "insensitive",
+    };
+  }
+
+  // ✅ Status
+  if (filters?.status) {
+    where.delayStatus = {
+      equals:
+        filters.status.toUpperCase(),
+      mode: "insensitive",
+    };
+  }
+
+  // ✅ Search
+  if (filters?.search) {
+    where.OR = [
+      {
+        flightNumber: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
       },
 
-      skip,
+      {
+        airportName: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
 
-      take: limit,
-    });
+      {
+        aircraftReg: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
+
+      {
+        bayName: {
+          contains: filters.search,
+          mode: "insensitive",
+        },
+      },
+    ];
+  }
+
+  // ✅ Date range
+  if (
+    filters?.startDate &&
+    filters?.endDate
+  ) {
+    const [
+      startYear,
+      startMonth,
+      startDay,
+    ] = filters.startDate
+      .split("-")
+      .map(Number);
+
+    const [
+      endYear,
+      endMonth,
+      endDay,
+    ] = filters.endDate
+      .split("-")
+      .map(Number);
+
+    const start = new Date(
+      Date.UTC(
+        startYear,
+        startMonth - 1,
+        startDay,
+        -1,
+        0,
+        0
+      )
+    );
+
+    const end = new Date(
+      Date.UTC(
+        endYear,
+        endMonth - 1,
+        endDay + 1,
+        -1,
+        0,
+        0
+      )
+    );
+
+    where.snapshotDate = {
+      gte: start,
+      lt: end,
+    };
+  }
+
+  // -----------------------------------
+  // TOTAL
+  // -----------------------------------
+
+  const total =
+    await prisma.archivedDailyOperation.count(
+      {
+        where,
+      }
+    );
+
+  // -----------------------------------
+  // FETCH
+  // -----------------------------------
+
+  const data =
+    await prisma.archivedDailyOperation.findMany(
+      {
+        where,
+
+        orderBy: {
+          snapshotDate: "desc",
+        },
+
+        skip,
+
+        take: limit,
+      }
+    );
+
+  // -----------------------------------
+  // META
+  // -----------------------------------
+
+  const totalPages =
+    total === 0
+      ? 1
+      : Math.ceil(total / limit);
 
   return {
     data,
@@ -34,15 +195,13 @@ export default async function getArchivedOperations(
 
       limit,
 
-      totalPages:
-        total === 0
-          ? 1
-          : Math.ceil(total / limit),
+      totalPages,
 
       hasNextPage:
-        skip + limit < total,
+        page < totalPages,
 
-      hasPrevPage: page > 1,
+      hasPrevPage:
+        page > 1,
     },
   };
 }
