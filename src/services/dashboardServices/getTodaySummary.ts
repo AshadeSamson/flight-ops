@@ -1,5 +1,4 @@
 import { prisma } from "../../config/prisma";
-
 import buildOperationsMetrics from "../../lib/buildOperationsMetrics";
 
 export default async function getTodaySummary() {
@@ -137,8 +136,49 @@ export default async function getTodaySummary() {
   // ARCHIVE BOARD
   // -----------------------------------
 
-  const archiveRows =
+  const archivedOperations =
     await prisma.archivedDailyOperation.findMany();
+
+  const archiveAirlineCodes = [
+    ...new Set(
+      archivedOperations
+        .map((row) => row.airlineCode)
+        .filter(Boolean)
+    ),
+  ] as string[];
+
+  const archiveAirlines =
+    await prisma.airline.findMany({
+      where: {
+        code: {
+          in: archiveAirlineCodes,
+        },
+      },
+    });
+
+  const archiveAirlineMap = new Map(
+    archiveAirlines.map((airline) => [
+      airline.code,
+      airline,
+    ])
+  );
+
+  const archiveRows =
+    archivedOperations.map((row) => {
+      const airline =
+        row.airlineCode
+          ? archiveAirlineMap.get(
+              row.airlineCode
+            )
+          : null;
+
+      return {
+        ...row,
+
+        airlineName:
+          airline?.name || null,
+      };
+    });
 
   // -----------------------------------
   // BUILD METRICS
@@ -156,7 +196,6 @@ export default async function getTodaySummary() {
 
   return {
     currentDay,
-
     archiveDay,
   };
 }
