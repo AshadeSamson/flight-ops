@@ -52,6 +52,12 @@ export default async function getTodaySummary() {
       where: {
         date: whereDate,
       },
+
+      include: {
+        aircraft: true,
+        bay: true,
+        airport: true,
+      },
     });
 
   // -----------------------------------
@@ -108,8 +114,34 @@ export default async function getTodaySummary() {
           : null;
 
       return {
+        flightNumber:
+          flight.flightNumber,
+
         movementType:
           flight.movementType,
+
+        airportName:
+          flight.airportName,
+
+        scheduledTime:
+          flight.scheduledTime,
+
+        actualTime:
+          operation?.actualTime ||
+          null,
+
+        aircraftReg:
+          operation?.aircraft
+            ?.registrationNumber ||
+          null,
+
+        bayName:
+          operation?.bay?.name ||
+          null,
+
+        soulsOnBoard:
+          operation?.soulsOnBoard ||
+          0,
 
         airlineCode:
           flight.airlineCode,
@@ -120,14 +152,6 @@ export default async function getTodaySummary() {
         delayStatus:
           operation?.delayStatus ||
           "PENDING",
-
-        actualTime:
-          operation?.actualTime ||
-          null,
-
-        soulsOnBoard:
-          operation?.soulsOnBoard ||
-          0,
       };
     }
   );
@@ -194,8 +218,112 @@ export default async function getTodaySummary() {
       archiveRows
     );
 
+  // -----------------------------------
+  // SOB TOTALS
+  // -----------------------------------
+
+  const totalArrivalSOB =
+    currentRows
+      .filter(
+        (row) =>
+          row.movementType ===
+          "ARRIVAL"
+      )
+      .reduce(
+        (sum, row) =>
+          sum +
+          (row.soulsOnBoard || 0),
+        0
+      );
+
+  const totalDepartureSOB =
+    currentRows
+      .filter(
+        (row) =>
+          row.movementType ===
+          "DEPARTURE"
+      )
+      .reduce(
+        (sum, row) =>
+          sum +
+          (row.soulsOnBoard || 0),
+        0
+      );
+
+  // -----------------------------------
+  // AIRLINE FLIGHT DETAILS
+  // -----------------------------------
+
+  const airlineBreakdownMap =
+    new Map();
+
+  currentRows.forEach((row) => {
+    const key =
+      row.airlineCode || "UNKNOWN";
+
+    if (
+      !airlineBreakdownMap.has(key)
+    ) {
+      airlineBreakdownMap.set(key, {
+        airlineCode:
+          row.airlineCode,
+
+        airlineName:
+          row.airlineName,
+
+        flights: [],
+      });
+    }
+
+    airlineBreakdownMap
+      .get(key)
+      .flights.push({
+        flightNumber:
+          row.flightNumber,
+
+        type:
+          row.movementType,
+
+        airport:
+          row.airportName,
+
+        scheduled:
+          row.scheduledTime,
+
+        actual:
+          row.actualTime,
+
+        aircraftReg:
+          row.aircraftReg,
+
+        bay:
+          row.bayName,
+
+        soulsOnBoard:
+          row.soulsOnBoard,
+      });
+  });
+
+  const airlineFlightBreakdown =
+    Array.from(
+      airlineBreakdownMap.values()
+    );
+
   return {
     currentDay,
+
     archiveDay,
+
+    // ✅ New SOB metrics
+    soulsOnBoard: {
+      arrivals:
+        totalArrivalSOB,
+
+      departures:
+        totalDepartureSOB,
+    },
+
+    // ✅ New airline flight details
+    airlineFlightBreakdown,
   };
 }
