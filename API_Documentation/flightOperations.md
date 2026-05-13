@@ -554,6 +554,11 @@ Frontend notes:
 
 The dashboard route returns metrics derived from live daily-board rows and the latest archive snapshot.
 
+Auth:
+
+- Requires `Authorization: Bearer <access_token>`.
+- Requires `ADMIN`, `SUPERVISOR`, or `OPS_STAFF`.
+
 Success response: `200 OK`
 
 ```json
@@ -603,7 +608,61 @@ Success response: `200 OK`
           "departures": 4
         }
       ]
-    }
+    },
+    "soulsOnBoard": {
+      "arrivals": 520,
+      "departures": 460
+    },
+    "airlineFlightBreakdown": [
+      {
+        "airlineCode": "P4",
+        "airlineName": "Air Peace",
+        "flights": [
+          {
+            "flightNumber": "P47123",
+            "type": "ARRIVAL",
+            "airport": "Lagos",
+            "scheduled": "09:30:00",
+            "actual": "2026-05-13T09:42:00.000Z",
+            "aircraftReg": "5N-BXX",
+            "bay": "BAY 04",
+            "soulsOnBoard": 112
+          }
+        ]
+      },
+      {
+        "airlineCode": null,
+        "airlineName": null,
+        "flights": [
+          {
+            "flightNumber": "UNKNOWN123",
+            "type": "DEPARTURE",
+            "airport": "Abuja",
+            "scheduled": "13:00:00",
+            "actual": null,
+            "aircraftReg": null,
+            "bay": null,
+            "soulsOnBoard": 0
+          }
+        ]
+      }
+    ]
   }
 }
 ```
+
+Response notes:
+
+- `currentDay` is built from today's schedule rows merged with matching live operations.
+- `archiveDay` is built from the current contents of `archivedDailyOperation`.
+- `soulsOnBoard.arrivals` is the total SOB across current-day arrival rows.
+- `soulsOnBoard.departures` is the total SOB across current-day departure rows.
+- `airlineFlightBreakdown` groups current-day rows by airline and includes per-flight display details.
+- Each `airlineFlightBreakdown[].flights[]` item contains `flightNumber`, `type`, `airport`, `scheduled`, `actual`, `aircraftReg`, `bay`, and `soulsOnBoard`.
+- `soulsOnBoard` on the per-flight breakdown defaults to `0` when no live operation SOB value exists yet.
+
+Frontend notes:
+
+- `airlineFlightBreakdown` is based on the current live board only, not the archived snapshot.
+- `airlineName` is resolved from airline code when possible.
+- Rows without an airline code are grouped under an `UNKNOWN` bucket internally; the returned group may contain `null` values for `airlineCode` and `airlineName`.
