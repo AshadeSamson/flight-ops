@@ -1,13 +1,23 @@
 type FlightRow = {
+  flightNumber?: string;
+
   movementType: "ARRIVAL" | "DEPARTURE";
+
+  airportName?: string | null;
+
+  scheduledTime?: string | null;
+
+  actualTime?: Date | null;
+
+  aircraftReg?: string | null;
+
+  bayName?: string | null;
 
   airlineCode?: string | null;
 
   airlineName?: string | null;
 
   delayStatus?: string | null;
-
-  actualTime?: Date | null;
 
   soulsOnBoard?: number | null;
 };
@@ -48,6 +58,34 @@ export default function buildOperationsMetrics(
       0
     );
 
+  const arrivalSoulsOnBoard =
+    rows
+      .filter(
+        (row) =>
+          row.movementType ===
+          "ARRIVAL"
+      )
+      .reduce(
+        (sum, row) =>
+          sum +
+          (row.soulsOnBoard || 0),
+        0
+      );
+
+  const departureSoulsOnBoard =
+    rows
+      .filter(
+        (row) =>
+          row.movementType ===
+          "DEPARTURE"
+      )
+      .reduce(
+        (sum, row) =>
+          sum +
+          (row.soulsOnBoard || 0),
+        0
+      );
+
   // -----------------------------------
   // STATUS BREAKDOWN
   // -----------------------------------
@@ -74,6 +112,11 @@ export default function buildOperationsMetrics(
         row.delayStatus ===
         "CANCELLED"
     ).length,
+
+    pending: rows.filter(
+      (row) =>
+        row.delayStatus === "PENDING"
+    ).length,
   };
 
   // -----------------------------------
@@ -94,6 +137,24 @@ export default function buildOperationsMetrics(
       departures: number;
 
       totalSoulsOnBoard: number;
+
+      flights: {
+        flightNumber?: string;
+
+        type: "ARRIVAL" | "DEPARTURE";
+
+        airport?: string | null;
+
+        scheduled?: string | null;
+
+        actual?: Date | null;
+
+        aircraftReg?: string | null;
+
+        bay?: string | null;
+
+        soulsOnBoard?: number | null;
+      }[];
     }
   >();
 
@@ -115,6 +176,8 @@ export default function buildOperationsMetrics(
         departures: 0,
 
         totalSoulsOnBoard: 0,
+
+        flights: [],
       });
     }
 
@@ -138,6 +201,32 @@ export default function buildOperationsMetrics(
     ) {
       airline.departures += 1;
     }
+
+    airline.flights.push({
+      flightNumber:
+        row.flightNumber,
+
+      type:
+        row.movementType,
+
+      airport:
+        row.airportName,
+
+      scheduled:
+        row.scheduledTime,
+
+      actual:
+        row.actualTime,
+
+      aircraftReg:
+        row.aircraftReg,
+
+      bay:
+        row.bayName,
+
+      soulsOnBoard:
+        row.soulsOnBoard,
+    });
   }
 
   return {
@@ -155,6 +244,14 @@ export default function buildOperationsMetrics(
     departures,
 
     totalSoulsOnBoard,
+
+    soulsOnBoard: {
+      arrivals:
+        arrivalSoulsOnBoard,
+
+      departures:
+        departureSoulsOnBoard,
+    },
 
     statusBreakdown,
 
