@@ -167,7 +167,7 @@ export default async function getArchivedOperations(
         where,
 
         orderBy: {
-          snapshotDate: "desc",
+          scheduledTime: "asc",
         },
 
         skip,
