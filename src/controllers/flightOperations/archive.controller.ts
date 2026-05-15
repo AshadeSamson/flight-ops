@@ -8,7 +8,8 @@ export const list = async (
   req: Request,
   res: Response
 ) => {
-  const page = Number(req.query.page) || 1;
+  const page =
+    Number(req.query.page) || 1;
 
   const limit =
     Number(req.query.limit) || 20;
@@ -16,7 +17,37 @@ export const list = async (
   const result =
     await getArchivedOperations(
       page,
-      limit
+      limit,
+      {
+        movementType:
+          req.query
+            .movementType as
+            | "ARRIVAL"
+            | "DEPARTURE",
+
+        airlineCode:
+          req.query
+            .airlineCode as string,
+
+        search:
+          req.query.search as string,
+
+        status:
+          req.query.status as
+            | "ON_TIME"
+            | "MINOR_DELAY"
+            | "DELAYED"
+            | "PENDING"
+            | "CANCELLED",
+
+        startDate:
+          req.query
+            .startDate as string,
+
+        endDate:
+          req.query
+            .endDate as string,
+      }
     );
 
   res.json(result);
