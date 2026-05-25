@@ -4,6 +4,10 @@ import {
   calculateDelayMinutes,
   getDelayStatus,
 } from "../../utils/flightMetrics";
+import {
+  getNextLagosDayAnchor,
+  parseLagosDateOnly,
+} from "../../utils/lagosDate";
 
 export default async function getDailyOperations(
   date: string,
@@ -23,16 +27,7 @@ export default async function getDailyOperations(
     throw new Error("Date is required");
   }
 
-  //  Strict YYYY-MM-DD validation
-  const dateMatch = cleanDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-
-  if (!dateMatch) {
-    throw new Error("Invalid date format. Use YYYY-MM-DD");
-  }
-
-  const year = Number(dateMatch[1]);
-  const month = Number(dateMatch[2]);
-  const day = Number(dateMatch[3]);
+  const startOfDay = parseLagosDateOnly(cleanDate);
 
   //  Safe pagination defaults
   page = Number(page) || 1;
@@ -43,14 +38,7 @@ export default async function getDailyOperations(
 
   const skip = (page - 1) * limit;
 
-  //  Lagos operational day stored as UTC equivalent
-  const startOfDay = new Date(
-    Date.UTC(year, month - 1, day, -1, 0, 0)
-  );
-
-  const endOfDay = new Date(
-    Date.UTC(year, month - 1, day + 1, -1, 0, 0)
-  );
+  const endOfDay = getNextLagosDayAnchor(startOfDay);
 
   const where: any = {
     date: {

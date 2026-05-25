@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
 import getNormalizedFidsData from "./getNormalizedFidsData";
 import createArchiveSnapshot from "../flightOperationServices/createArchiveSnapshot";
+import { getLagosDayAnchor } from "../../utils/lagosDate";
 
 export default async function syncDailyFlightSchedule() {
   try {
@@ -11,25 +12,7 @@ export default async function syncDailyFlightSchedule() {
       return;
     }
 
-    //  Lagos operational day (stored as UTC equivalent)
-    const now = new Date();
-
-    const lagosNow = new Date(
-      now.toLocaleString("en-US", {
-        timeZone: "Africa/Lagos",
-      })
-    );
-
-    const startOfDay = new Date(
-      Date.UTC(
-        lagosNow.getFullYear(),
-        lagosNow.getMonth(),
-        lagosNow.getDate(),
-        -1,
-        0,
-        0
-      )
-    );
+    const startOfDay = getLagosDayAnchor();
 
     const existingFlights =
       await prisma.dailyFlightSchedule.count();

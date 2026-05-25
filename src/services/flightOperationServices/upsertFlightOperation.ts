@@ -6,6 +6,7 @@ import {
   calculateDelayMinutes,
   getDelayStatus,
 } from "../../utils/flightMetrics";
+import { getLagosDateRange } from "../../utils/lagosDate";
 import createAuditLog from "../auditServices/createAuditLog";
 
 export default async function upsertFlightOperation(
@@ -37,6 +38,8 @@ export default async function upsertFlightOperation(
       date,
     } = result.data;
 
+    const isCancelled = delayStatus === "CANCELLED";
+
     if (!flightNumber || !movementType || !date) {
       return res.status(400).json({
         message: "flightNumber, movementType and date are required",
@@ -44,22 +47,7 @@ export default async function upsertFlightOperation(
     }
 
     // ✅ Normalize Lagos day
-    const inputDate = new Date(date);
-
-    const lagosDate = new Date(
-      inputDate.toLocaleString("en-US", {
-        timeZone: "Africa/Lagos",
-      })
-    );
-
-    const startOfDay = new Date(
-      lagosDate.getFullYear(),
-      lagosDate.getMonth(),
-      lagosDate.getDate()
-    );
-
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(endOfDay.getDate() + 1);
+    const { startOfDay, endOfDay } = getLagosDateRange(date);
 
     const schedule = await prisma.dailyFlightSchedule.findFirst({
       where: {
@@ -72,11 +60,13 @@ export default async function upsertFlightOperation(
       },
     });
 
+    
+
     // ✅ Map Aircraft
     let aircraftId: string | undefined;
     let aircraftAirlineId: string | undefined;
 
-    if (aircraftReg) {
+    if (aircraftReg && !isCancelled) {
       const aircraft = await prisma.aircraft.findFirst({
         where: {
           registrationNumber: aircraftReg,
@@ -96,7 +86,7 @@ export default async function upsertFlightOperation(
     // ✅ Map Bay
     let bayId: string | undefined;
 
-    if (bayName) {
+    if (bayName && !isCancelled) {
       const bay = await prisma.bay.findFirst({
         where: {
           name: bayName,
@@ -129,7 +119,7 @@ export default async function upsertFlightOperation(
       schedule?.airlineCode?.trim().toUpperCase() ||
       flightAirlineCode;
 
-    if (resolvedAirlineCode) {
+    if (resolvedAirlineCode && !isCancelled) {
       const airline = await prisma.airline.findUnique({
         where: {
           code: resolvedAirlineCode,
@@ -158,7 +148,7 @@ export default async function upsertFlightOperation(
       airportName?.trim() ||
       schedule?.airportName?.trim();
 
-    if (resolvedAirportCode) {
+    if (resolvedAirportCode && !isCancelled) {
       const airport = await prisma.airport.findUnique({
         where: {
           code: resolvedAirportCode,
@@ -172,7 +162,7 @@ export default async function upsertFlightOperation(
       }
 
       airportId = airport.id;
-    } else if (resolvedAirportName) {
+    } else if (resolvedAirportName && !isCancelled) {
       const airport = await prisma.airport.findFirst({
         where: {
           name: {
@@ -193,6 +183,7 @@ export default async function upsertFlightOperation(
 
     // ✅ Get user
     const user = (req as any).user;
+    
 
     // ✅ Delay / status handling
     let calculatedDelayMinutes: number | null = null;
