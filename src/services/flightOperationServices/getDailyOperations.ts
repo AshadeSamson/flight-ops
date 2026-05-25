@@ -31,7 +31,7 @@ export default async function getDailyOperations(
 
   //  Safe pagination defaults
   const fetchAll =
-  String(limit).toLowerCase() === "all";
+    String(limit).trim().toLowerCase() === "all";
 
   page = Number(page) || 1;
 
@@ -190,7 +190,7 @@ export default async function getDailyOperations(
       page,
       limit:
         numericLimit === undefined
-          ? total
+          ? "all"
           : numericLimit,
       totalPages,
       hasNextPage: page < totalPages,
