@@ -12,7 +12,7 @@ import {
 export default async function getDailyOperations(
   date: string,
   page: number = 1,
-  limit: number = 20,
+  limit: number | string = 20,
   filters?: {
     movementType?: "ARRIVAL" | "DEPARTURE";
     airlineCode?: string;
@@ -30,13 +30,30 @@ export default async function getDailyOperations(
   const startOfDay = parseLagosDateOnly(cleanDate);
 
   //  Safe pagination defaults
+  const fetchAll =
+  String(limit).toLowerCase() === "all";
+
   page = Number(page) || 1;
-  limit = Number(limit) || 20;
 
   if (page < 1) page = 1;
-  if (limit < 1) limit = 20;
 
-  const skip = (page - 1) * limit;
+  const numericLimit = fetchAll
+    ? undefined
+    : Number(limit) || 20;
+
+  if (
+    numericLimit !== undefined &&
+    numericLimit < 1
+  ) {
+    throw new Error(
+      "limit must be greater than 0"
+    );
+  }
+
+  const skip =
+    numericLimit !== undefined
+      ? (page - 1) * numericLimit
+      : 0;
 
   const endOfDay = getNextLagosDayAnchor(startOfDay);
 
@@ -150,20 +167,31 @@ export default async function getDailyOperations(
     : merged;
 
   const total = filteredData.length;
-  const totalPages =
-    total === 0 ? 1 : Math.ceil(total / limit);
 
-  const paginated = filteredData.slice(
-    skip,
-    skip + limit
-  );
+  const totalPages =
+  numericLimit === undefined
+    ? 1
+    : total === 0
+    ? 1
+    : Math.ceil(total / numericLimit);
+
+  const paginated =
+    numericLimit === undefined
+      ? filteredData
+      : filteredData.slice(
+          skip,
+          skip + numericLimit
+        );
 
   return {
     data: paginated,
     meta: {
       total,
       page,
-      limit,
+      limit:
+        numericLimit === undefined
+          ? total
+          : numericLimit,
       totalPages,
       hasNextPage: page < totalPages,
       hasPrevPage: page > 1,
