@@ -23,6 +23,7 @@ export async function getDailyOperationsHandler(
   const {
     date,
     page = "1",
+    limit = "20",
     movementType,
     airlineCode,
     search,
@@ -37,19 +38,31 @@ export async function getDailyOperationsHandler(
 
   const data = await getDailyOperations(
     String(date),
+
     Number(page),
-    20,
+
+    limit as string,
+
     {
       movementType:
-        movementType as "ARRIVAL" | "DEPARTURE",
-      airlineCode: airlineCode as string,
-      search: search as string,
+        movementType as
+          | "ARRIVAL"
+          | "DEPARTURE",
+
+      airlineCode:
+        airlineCode as string,
+
+      search:
+        search as string,
+
       status: status as any,
     }
   );
 
   return res.status(200).json({
-    message: "Daily operations retrieved successfully",
+    message:
+      "Daily operations retrieved successfully",
+
     ...data,
   });
 }
