@@ -6,7 +6,8 @@ import {
 
 export default async function getArchivedOperations(
   page: number = 1,
-  limit: number = 20,
+
+  limit: number | string = 20,
 
   filters?: {
     movementType?: "ARRIVAL" | "DEPARTURE";
@@ -27,16 +28,30 @@ export default async function getArchivedOperations(
     endDate?: string;
   }
 ) {
-  // ✅ Safe pagination
-  page = Number(page) || 1;
+  // -----------------------------------
+  // PAGINATION
+  // -----------------------------------
 
-  limit = Number(limit) || 20;
+  page = Number(page) || 1;
 
   if (page < 1) page = 1;
 
-  if (limit < 1) limit = 20;
+  const fetchAll =
+    String(limit).toLowerCase() ===
+    "all";
 
-  const skip = (page - 1) * limit;
+  const parsedLimit = fetchAll
+    ? null
+    : Number(limit) || 20;
+
+  const safeLimit =
+    parsedLimit && parsedLimit > 0
+      ? parsedLimit
+      : 20;
+
+  const skip = fetchAll
+    ? undefined
+    : (page - 1) * safeLimit;
 
   // -----------------------------------
   // WHERE FILTERS
@@ -55,6 +70,7 @@ export default async function getArchivedOperations(
     where.airlineCode = {
       equals:
         filters.airlineCode.toUpperCase(),
+
       mode: "insensitive",
     };
   }
@@ -64,6 +80,7 @@ export default async function getArchivedOperations(
     where.delayStatus = {
       equals:
         filters.status.toUpperCase(),
+
       mode: "insensitive",
     };
   }
@@ -74,6 +91,7 @@ export default async function getArchivedOperations(
       {
         flightNumber: {
           contains: filters.search,
+
           mode: "insensitive",
         },
       },
@@ -81,6 +99,7 @@ export default async function getArchivedOperations(
       {
         airportName: {
           contains: filters.search,
+
           mode: "insensitive",
         },
       },
@@ -88,6 +107,7 @@ export default async function getArchivedOperations(
       {
         aircraftReg: {
           contains: filters.search,
+
           mode: "insensitive",
         },
       },
@@ -95,6 +115,7 @@ export default async function getArchivedOperations(
       {
         bayName: {
           contains: filters.search,
+
           mode: "insensitive",
         },
       },
@@ -106,13 +127,21 @@ export default async function getArchivedOperations(
     filters?.startDate &&
     filters?.endDate
   ) {
-    const start = parseLagosDateOnly(filters.startDate);
-    const end = getNextLagosDayAnchor(
-      parseLagosDateOnly(filters.endDate)
-    );
+    const start =
+      parseLagosDateOnly(
+        filters.startDate
+      );
+
+    const end =
+      getNextLagosDayAnchor(
+        parseLagosDateOnly(
+          filters.endDate
+        )
+      );
 
     where.snapshotDate = {
       gte: start,
+
       lt: end,
     };
   }
@@ -141,9 +170,13 @@ export default async function getArchivedOperations(
           scheduledTime: "asc",
         },
 
-        skip,
+        ...(fetchAll
+          ? {}
+          : {
+              skip,
 
-        take: limit,
+              take: safeLimit,
+            }),
       }
     );
 
@@ -151,10 +184,13 @@ export default async function getArchivedOperations(
   // META
   // -----------------------------------
 
-  const totalPages =
-    total === 0
-      ? 1
-      : Math.ceil(total / limit);
+  const totalPages = fetchAll
+    ? 1
+    : total === 0
+    ? 1
+    : Math.ceil(
+        total / safeLimit
+      );
 
   return {
     data,
@@ -164,15 +200,19 @@ export default async function getArchivedOperations(
 
       page,
 
-      limit,
+      limit: fetchAll
+        ? "all"
+        : safeLimit,
 
       totalPages,
 
-      hasNextPage:
-        page < totalPages,
+      hasNextPage: fetchAll
+        ? false
+        : page < totalPages,
 
-      hasPrevPage:
-        page > 1,
+      hasPrevPage: fetchAll
+        ? false
+        : page > 1,
     },
   };
 }

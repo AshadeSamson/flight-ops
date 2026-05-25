@@ -12,12 +12,15 @@ export const list = async (
     Number(req.query.page) || 1;
 
   const limit =
-    Number(req.query.limit) || 20;
+    (req.query.limit as string) ||
+    "20";
 
   const result =
     await getArchivedOperations(
       page,
+
       limit,
+
       {
         movementType:
           req.query
