@@ -1,3 +1,5 @@
+import { getLagosDayAnchor } from "../../utils/lagosDate";
+
 type RawFidsFlight = {
   airlineCode?: string;
   flightNumber?: string;
@@ -28,20 +30,7 @@ export default function normalizeFidsData(
 ): NormalizedFlight[] {
   const allFlights = [...departures, ...arrivals];
 
-  // Lagos operational day
-  const now = new Date();
-
-  const lagosToday = new Date(
-    now.toLocaleString("en-US", {
-      timeZone: "Africa/Lagos",
-    })
-  );
-
-  const startOfDay = new Date(
-    lagosToday.getFullYear(),
-    lagosToday.getMonth(),
-    lagosToday.getDate()
-  );
+  const startOfDay = getLagosDayAnchor();
 
   return allFlights
     .map((flight) => {

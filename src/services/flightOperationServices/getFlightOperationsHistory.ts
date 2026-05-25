@@ -1,4 +1,8 @@
 import { prisma } from "../../config/prisma";
+import {
+  getNextLagosDayAnchor,
+  parseLagosDateOnly,
+} from "../../utils/lagosDate";
 
 export default async function getFlightOperationsHistory(
   params: {
@@ -29,35 +33,9 @@ export default async function getFlightOperationsHistory(
 
   const skip = (page - 1) * limit;
 
-  const [startYear, startMonth, startDay] =
-    startDate.split("-").map(Number);
+  const start = parseLagosDateOnly(startDate);
 
-  const [endYear, endMonth, endDay] =
-    endDate.split("-").map(Number);
-
-  // ✅ Lagos midnight stored as UTC equivalent
-  const start = new Date(
-    Date.UTC(
-      startYear,
-      startMonth - 1,
-      startDay,
-      -1,
-      0,
-      0
-    )
-  );
-
-  // ✅ Next Lagos midnight
-  const end = new Date(
-    Date.UTC(
-      endYear,
-      endMonth - 1,
-      endDay + 1,
-      -1,
-      0,
-      0
-    )
-  );
+  const end = getNextLagosDayAnchor(parseLagosDateOnly(endDate));
 
   const where: any = {
     date: {

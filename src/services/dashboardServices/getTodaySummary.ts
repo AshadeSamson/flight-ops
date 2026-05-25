@@ -1,33 +1,9 @@
 import { prisma } from "../../config/prisma";
 import buildOperationsMetrics from "../../lib/buildOperationsMetrics";
+import { getLagosDateRange } from "../../utils/lagosDate";
 
 export default async function getTodaySummary() {
-  const now = new Date();
-
-  const lagosNow = new Date(
-    now.toLocaleString("en-US", {
-      timeZone: "Africa/Lagos",
-    })
-  );
-
-  const startOfDay = new Date(
-    Date.UTC(
-      lagosNow.getFullYear(),
-      lagosNow.getMonth(),
-      lagosNow.getDate(),
-      -1,
-      0,
-      0
-    )
-  );
-
-  const endOfDay = new Date(
-    startOfDay
-  );
-
-  endOfDay.setUTCDate(
-    endOfDay.getUTCDate() + 1
-  );
+  const { startOfDay, endOfDay } = getLagosDateRange();
 
   const whereDate = {
     gte: startOfDay,

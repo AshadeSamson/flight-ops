@@ -5,6 +5,7 @@ import {
   calculateDelayMinutes,
   getDelayStatus,
 } from "../../utils/flightMetrics";
+import { getLagosDayAnchor } from "../../utils/lagosDate";
 
 type Payload = {
   aircraftReg?: string;
@@ -124,24 +125,8 @@ export default async function updateArchivedOperation(
     airportId = airport?.id;
   }
 
-  // -----------------------------
-  // DATE NORMALIZATION
-  // -----------------------------
-
-  const inputDate = new Date(
+  const startOfDay = getLagosDayAnchor(
     archive.snapshotDate
-  );
-
-  const lagosDate = new Date(
-    inputDate.toLocaleString("en-US", {
-      timeZone: "Africa/Lagos",
-    })
-  );
-
-  const startOfDay = new Date(
-    lagosDate.getFullYear(),
-    lagosDate.getMonth(),
-    lagosDate.getDate()
   );
 
   // -----------------------------

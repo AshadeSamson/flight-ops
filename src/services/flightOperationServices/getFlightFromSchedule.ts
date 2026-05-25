@@ -1,4 +1,5 @@
 import { prisma } from "../../config/prisma";
+import { getLagosDateRange } from "../../utils/lagosDate";
 
 export default async function getFlightFromSchedule(
   flightNumber: string,
@@ -6,20 +7,7 @@ export default async function getFlightFromSchedule(
   date: string
 ) {
   
-  const inputDate = new Date(date);
-
-  const lagosDate = new Date(
-    inputDate.toLocaleString("en-US", { timeZone: "Africa/Lagos" })
-  );
-
-  const startOfDay = new Date(
-    lagosDate.getFullYear(),
-    lagosDate.getMonth(),
-    lagosDate.getDate()
-  );
-
-  const endOfDay = new Date(startOfDay);
-  endOfDay.setDate(endOfDay.getDate() + 1);
+  const { startOfDay, endOfDay } = getLagosDateRange(date);
 
   const flight = await prisma.dailyFlightSchedule.findFirst({
     where: {

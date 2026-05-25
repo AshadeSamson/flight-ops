@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../../config/prisma";
 import { createFlightOperationSchema } from "../../controllers/flightOperations/flightOperation.schema";
+import { getLagosDayAnchor } from "../../utils/lagosDate";
 
 export default async function createFlightOperation(
   req: Request,
@@ -28,18 +29,7 @@ export default async function createFlightOperation(
       date,
     } = result.data;
 
-    //  Normalize Lagos day
-    const inputDate = new Date(date);
-
-    const lagosDate = new Date(
-      inputDate.toLocaleString("en-US", { timeZone: "Africa/Lagos" })
-    );
-
-    const startOfDay = new Date(
-      lagosDate.getFullYear(),
-      lagosDate.getMonth(),
-      lagosDate.getDate()
-    );
+    const startOfDay = getLagosDayAnchor(date);
 
     // 🔄 Map Aircraft (reg → id)
     let aircraftId: string | undefined;

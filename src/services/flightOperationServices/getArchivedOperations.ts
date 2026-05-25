@@ -1,4 +1,8 @@
 import { prisma } from "../../config/prisma";
+import {
+  getNextLagosDayAnchor,
+  parseLagosDateOnly,
+} from "../../utils/lagosDate";
 
 export default async function getArchivedOperations(
   page: number = 1,
@@ -102,42 +106,9 @@ export default async function getArchivedOperations(
     filters?.startDate &&
     filters?.endDate
   ) {
-    const [
-      startYear,
-      startMonth,
-      startDay,
-    ] = filters.startDate
-      .split("-")
-      .map(Number);
-
-    const [
-      endYear,
-      endMonth,
-      endDay,
-    ] = filters.endDate
-      .split("-")
-      .map(Number);
-
-    const start = new Date(
-      Date.UTC(
-        startYear,
-        startMonth - 1,
-        startDay,
-        -1,
-        0,
-        0
-      )
-    );
-
-    const end = new Date(
-      Date.UTC(
-        endYear,
-        endMonth - 1,
-        endDay + 1,
-        -1,
-        0,
-        0
-      )
+    const start = parseLagosDateOnly(filters.startDate);
+    const end = getNextLagosDayAnchor(
+      parseLagosDateOnly(filters.endDate)
     );
 
     where.snapshotDate = {
