@@ -37,7 +37,7 @@ export default async function getArchivedOperations(
   if (page < 1) page = 1;
 
   const fetchAll =
-    String(limit).toLowerCase() ===
+    String(limit).trim().toLowerCase() ===
     "all";
 
   const parsedLimit = fetchAll
