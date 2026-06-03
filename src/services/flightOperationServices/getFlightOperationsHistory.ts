@@ -109,8 +109,12 @@ export default async function getFlightOperationsHistory(
       orderBy: {
         date: "desc",
       },
-      skip,
-      take: numericLimit,
+      ...(numericLimit !== undefined
+      ? {
+          skip,
+          take: numericLimit,
+        }
+      : {}),
     });
 
   const totalPages =
@@ -120,13 +124,10 @@ export default async function getFlightOperationsHistory(
       ? 1
       : Math.ceil(total / numericLimit);
 
-  const paginated =
-    numericLimit === undefined
-      ? data
-      : data.slice(skip, skip + numericLimit);
+
 
   return {
-    data: paginated,
+    data,
     meta: {
       total,
       page,
