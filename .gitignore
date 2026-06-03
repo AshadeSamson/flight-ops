@@ -3,3 +3,4 @@ node_modules
 /generated/prisma
 details.txt
 dist/
+reference.md
