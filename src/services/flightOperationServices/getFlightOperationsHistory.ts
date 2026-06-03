@@ -9,7 +9,7 @@ export default async function getFlightOperationsHistory(
     startDate: string;
     endDate: string;
     page?: number;
-    limit?: number;
+    limit?: string | number;
     movementType?: "ARRIVAL" | "DEPARTURE";
     airlineCode?: string;
     status?: string;
@@ -26,12 +26,32 @@ export default async function getFlightOperationsHistory(
   } = params;
 
   let page = Number(params.page) || 1;
-  let limit = Number(params.limit) || 20;
+
+  //  Safe pagination defaults
+  const fetchAll =
+    String(params.limit ?? "20").trim().toLowerCase() === "all";
+
+  page = Number(page) || 1;
 
   if (page < 1) page = 1;
-  if (limit < 1) limit = 20;
 
-  const skip = (page - 1) * limit;
+  const numericLimit = fetchAll
+    ? undefined
+    : Number(params.limit) || 20;
+
+  if (
+    numericLimit !== undefined &&
+    numericLimit < 1
+  ) {
+    throw new Error(
+      "limit must be greater than 0"
+    );
+  }
+
+  const skip =
+    numericLimit !== undefined
+      ? (page - 1) * numericLimit
+      : 0;
 
   const start = parseLagosDateOnly(startDate);
 
@@ -90,21 +110,32 @@ export default async function getFlightOperationsHistory(
         date: "desc",
       },
       skip,
-      take: limit,
+      take: numericLimit,
     });
 
+  const totalPages =
+    numericLimit === undefined
+      ? 1
+      : total === 0
+      ? 1
+      : Math.ceil(total / numericLimit);
+
+  const paginated =
+    numericLimit === undefined
+      ? data
+      : data.slice(skip, skip + numericLimit);
+
   return {
-    data,
+    data: paginated,
     meta: {
       total,
       page,
-      limit,
-      totalPages:
-        total === 0
-          ? 1
-          : Math.ceil(total / limit),
-      hasNextPage:
-        skip + limit < total,
+      limit:
+        numericLimit === undefined
+          ? "all"
+          : numericLimit,
+      totalPages,
+      hasNextPage: page < totalPages,
       hasPrevPage: page > 1,
     },
   };

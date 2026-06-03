@@ -86,7 +86,7 @@ export async function getFlightOperationsHistoryHandler(
       startDate: String(req.query.startDate),
       endDate: String(req.query.endDate),
       page: Number(req.query.page || 1),
-      limit: Number(req.query.limit || 20),
+      limit: req.query.limit as string || "20",
       movementType:
         req.query.movementType as any,
       airlineCode:
