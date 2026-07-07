@@ -132,6 +132,9 @@ export default async function createArchiveSnapshot() {
         delayMinutes,
 
         delayStatus,
+
+        remarks:
+          operation?.remarks || null,
       };
     }
   );

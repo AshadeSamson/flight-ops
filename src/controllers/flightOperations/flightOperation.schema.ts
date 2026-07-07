@@ -26,6 +26,8 @@ export const createFlightOperationSchema = z.object({
 
   actualTime: z.string().datetime().optional(),
 
+  remarks: z.string().optional(),
+
   date: dateSchema,
 });
 
@@ -56,6 +58,8 @@ export const updateFlightOperationSchema = z.object({
     "CANCELLED",
   ])
   .optional(),
+
+  remarks: z.string().optional(),
 
   date: dateSchema.optional(),
 });
