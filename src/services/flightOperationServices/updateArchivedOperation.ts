@@ -13,6 +13,7 @@ type Payload = {
   soulsOnBoard?: number;
   actualTime?: string;
   delayStatus?: string;
+  remarks?: string;
 };
 
 export default async function updateArchivedOperation(
@@ -226,6 +227,10 @@ export default async function updateArchivedOperation(
 
         delayStatus:
           calculatedDelayStatus,
+
+        ...(payload.remarks && {
+          remarks: payload.remarks,
+        }),
       },
 
       create: {
@@ -263,6 +268,8 @@ export default async function updateArchivedOperation(
 
         delayStatus:
           calculatedDelayStatus,
+
+        remarks: payload.remarks || null,
 
         createdById: userId,
       },
@@ -305,6 +312,10 @@ export default async function updateArchivedOperation(
 
         delayStatus:
           calculatedDelayStatus,
+
+        ...(payload.remarks && {
+          remarks: payload.remarks,
+        }),
       },
     }
   );

@@ -19,4 +19,6 @@ export const updateArchiveOperationSchema =
         "PENDING",
       ])
       .optional(),
+
+    remarks: z.string().optional(),
   });

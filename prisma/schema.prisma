@@ -127,6 +127,8 @@ model FlightOperation {
   delayMinutes Int?
   delayStatus  String?
 
+  remarks     String?
+
   date DateTime // Lagos day anchor
 
   createdById String?
@@ -189,6 +191,8 @@ model ArchivedDailyOperation {
 
   delayMinutes Int?
   delayStatus String?
+
+  remarks     String?
 
   createdAt DateTime @default(now())
 

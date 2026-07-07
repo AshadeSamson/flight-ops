@@ -35,6 +35,7 @@ export default async function upsertFlightOperation(
       scheduledTime,
       actualTime,
       delayStatus,
+      remarks,
       date,
     } = result.data;
 
@@ -252,6 +253,10 @@ export default async function upsertFlightOperation(
             scheduledTime,
           }),
 
+          ...(remarks && {
+            remarks,
+          }),
+
           ...(delayStatus === "CANCELLED"
             ? {
                 actualTime: null,
@@ -298,6 +303,8 @@ export default async function upsertFlightOperation(
 
           delayStatus:
             calculatedDelayStatus,
+          
+          remarks: remarks || null,
 
           createdById: user?.id,
         },
@@ -340,6 +347,8 @@ export default async function upsertFlightOperation(
 
           delayMinutes:
             calculatedDelayMinutes,
+
+          remarks: remarks || null,
         },
 
         ipAddress: req.ip,

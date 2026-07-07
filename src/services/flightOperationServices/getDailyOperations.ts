@@ -154,6 +154,9 @@ export default async function getDailyOperations(
 
       delayMinutes,
       delayStatus,
+
+      remarks: operation?.remarks || null,
+
     };
   });
 
