@@ -26,6 +26,7 @@ export default async function createFlightOperation(
       soulsOnBoard,
       scheduledTime,
       actualTime,
+      boardingTime,
       remarks,
       date,
     } = result.data;
@@ -86,6 +87,8 @@ export default async function createFlightOperation(
 
         scheduledTime,
         actualTime: actualTime ? new Date(actualTime) : undefined,
+
+        boardingCall: boardingTime ? new Date(boardingTime) : null,
 
         remarks: remarks || null,
 

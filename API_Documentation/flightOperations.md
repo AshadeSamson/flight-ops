@@ -61,6 +61,8 @@ Common auth-related errors:
 - `movementType` must be one of `ARRIVAL` or `DEPARTURE`.
 - `scheduledTime` must be in `HH:mm:ss` format.
 - `actualTime` must be an ISO datetime string when supplied.
+- `boardingTime` must be an ISO datetime string when supplied and is stored as `boardingCall`.
+- `remarks` is optional free-text and is persisted on the operation and archive snapshot.
 - `date` for `PATCH /upsert` and `POST /` must be an ISO datetime string.
 - `date` for `GET /daily` must be sent as `YYYY-MM-DD`.
 - The backend stores and queries operational days using Lagos-day boundaries.
@@ -125,11 +127,13 @@ Success response: `200 OK`
       "operationId": "clxop123",
       "soulsOnBoard": 112,
       "actualTime": "2026-05-07T09:42:00.000Z",
+      "boardingCall": "2026-05-07T09:10:00.000Z",
       "aircraftReg": "5N-BXX",
       "aircraftType": "B737",
       "bayName": "BAY 04",
       "delayMinutes": 12,
-      "delayStatus": "MINOR_DELAY"
+      "delayStatus": "MINOR_DELAY",
+      "remarks": "Gate change confirmed"
     }
   ],
   "meta": {
@@ -147,7 +151,7 @@ Response notes:
 
 - Rows are schedule-driven, not operation-driven.
 - `operationId` is `null` when no live operation exists yet for that row.
-- `soulsOnBoard`, `actualTime`, `aircraftReg`, `aircraftType`, `bayName`, and `delayMinutes` can be `null`.
+- `soulsOnBoard`, `actualTime`, `boardingCall`, `aircraftReg`, `aircraftType`, `bayName`, `delayMinutes`, and `remarks` can be `null`.
 - `delayStatus` defaults to `PENDING` when no actual time exists.
 
 Possible error responses:
@@ -195,7 +199,9 @@ Request body:
   "soulsOnBoard": 112,
   "scheduledTime": "09:30:00",
   "actualTime": "2026-05-07T09:42:00.000Z",
+  "boardingTime": "2026-05-07T09:10:00.000Z",
   "delayStatus": "MINOR_DELAY",
+  "remarks": "Gate change confirmed",
   "date": "2026-05-07T00:00:00.000Z"
 }
 ```
@@ -213,7 +219,9 @@ Request field details:
 - `soulsOnBoard`: optional positive integer
 - `scheduledTime`: optional by schema, but should be sent when creating a new record
 - `actualTime`: optional ISO datetime string
+- `boardingTime`: optional ISO datetime string; stored as `boardingCall`
 - `delayStatus`: optional, supports `ON_TIME`, `MINOR_DELAY`, `DELAYED`, `PENDING`, `CANCELLED`
+- `remarks`: optional free-text string persisted to the operation and archive snapshot
 - `aircraftType`: accepted by schema but not used by the service
 
 Resolution rules:
@@ -222,8 +230,9 @@ Resolution rules:
 - If no airline code is resolved but the aircraft exists, the aircraft's airline is used.
 - Airport resolution order: request `airportCode`, schedule `airportCode`, then request/schedule `airportName`.
 - The service checks today's matching schedule row before resolving airline and airport fallbacks.
-- If `delayStatus` is `CANCELLED`, the backend clears `actualTime` and stores `delayStatus` as `CANCELLED`.
+- If `delayStatus` is `CANCELLED`, the backend clears `actualTime`, stores `delayStatus` as `CANCELLED`, and sets `delayMinutes` to `null`.
 - For non-cancelled records, delay values are recalculated from `scheduledTime` and `actualTime` when `scheduledTime` exists.
+- If no `scheduledTime` is provided and no matching schedule row is found, the backend returns `400` with `scheduledTime is required`.
 
 Success response: `200 OK`
 
@@ -241,8 +250,10 @@ Success response: `200 OK`
     "soulsOnBoard": 112,
     "scheduledTime": "09:30:00",
     "actualTime": "2026-05-07T09:42:00.000Z",
+    "boardingCall": "2026-05-07T09:10:00.000Z",
     "delayMinutes": 12,
     "delayStatus": "MINOR_DELAY",
+    "remarks": "Gate change confirmed",
     "date": "2026-05-07T00:00:00.000Z",
     "createdById": "clxuser123",
     "createdAt": "2026-05-07T09:10:00.000Z",
@@ -380,6 +391,8 @@ Request body:
   "soulsOnBoard": 112,
   "scheduledTime": "09:30:00",
   "actualTime": "2026-05-07T09:42:00.000Z",
+  "boardingTime": "2026-05-07T09:10:00.000Z",
+  "remarks": "Gate change confirmed",
   "date": "2026-05-07T00:00:00.000Z"
 }
 ```
@@ -400,8 +413,10 @@ Success response: `201 Created`
     "soulsOnBoard": 112,
     "scheduledTime": "09:30:00",
     "actualTime": "2026-05-07T09:42:00.000Z",
+    "boardingCall": "2026-05-07T09:10:00.000Z",
     "delayMinutes": null,
     "delayStatus": null,
+    "remarks": "Gate change confirmed",
     "date": "2026-05-07T00:00:00.000Z",
     "createdById": "clxuser123",
     "createdAt": "2026-05-07T09:10:00.000Z",
@@ -459,7 +474,7 @@ Query parameters:
 - `startDate`: expected format `YYYY-MM-DD`
 - `endDate`: expected format `YYYY-MM-DD`
 - `page`: optional, default `1`
-- `limit`: optional, default `20`
+- `limit`: optional, default `20`; also accepts `all` to return the full result set without pagination
 - `movementType`: optional, `ARRIVAL` or `DEPARTURE`
 - `airlineCode`: optional string
 - `status`: optional string
@@ -488,8 +503,10 @@ Success response: `200 OK`
       "soulsOnBoard": 112,
       "scheduledTime": "09:30:00",
       "actualTime": "2026-05-07T09:42:00.000Z",
+      "boardingCall": "2026-05-07T09:10:00.000Z",
       "delayMinutes": 12,
       "delayStatus": "MINOR_DELAY",
+      "remarks": "Gate change confirmed",
       "date": "2026-05-07T00:00:00.000Z",
       "createdById": "clxuser123",
       "createdAt": "2026-05-07T09:10:00.000Z",

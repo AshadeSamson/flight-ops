@@ -116,6 +116,8 @@ export default async function createArchiveSnapshot() {
           operation?.actualTime ||
           null,
 
+        boardingCall: operation?.boardingCall || null,
+
         aircraftReg:
           operation?.aircraft
             ?.registrationNumber ||
