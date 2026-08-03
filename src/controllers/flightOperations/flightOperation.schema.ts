@@ -28,6 +28,8 @@ export const createFlightOperationSchema = z.object({
 
   remarks: z.string().optional(),
 
+  boardingTime: z.string().optional(),
+
   date: dateSchema,
 });
 
@@ -48,6 +50,8 @@ export const updateFlightOperationSchema = z.object({
   scheduledTime: timeStringSchema.optional(),
 
   actualTime: z.string().datetime().optional(),
+
+  boardingTime: z.string().optional(),
 
   delayStatus: z
   .enum([

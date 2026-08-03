@@ -117,11 +117,13 @@ Success response: `200 OK`
       "operationId": "clxop123",
       "soulsOnBoard": 112,
       "actualTime": "2026-05-06T09:42:00.000Z",
+      "boardingCall": "2026-05-06T09:10:00.000Z",
       "aircraftReg": "5N-BXX",
       "aircraftType": "B737",
       "bayName": "BAY 04",
       "delayMinutes": 12,
       "delayStatus": "MINOR_DELAY",
+      "remarks": "Gate change confirmed",
       "createdAt": "2026-05-06T23:00:00.000Z"
     }
   ],
@@ -141,7 +143,7 @@ Response field notes:
 - This endpoint returns raw `ArchivedDailyOperation` rows from the database.
 - `snapshotDate` is the archived operational day.
 - `operationId` is the linked live flight operation ID at the time the snapshot was created, if any.
-- `actualTime`, `soulsOnBoard`, `aircraftReg`, `aircraftType`, `bayName`, `delayMinutes`, and `delayStatus` can be `null` when there was no operation data at snapshot time.
+- `actualTime`, `boardingCall`, `soulsOnBoard`, `aircraftReg`, `aircraftType`, `bayName`, `delayMinutes`, `delayStatus`, and `remarks` can be `null` or absent when there was no operation data at snapshot time.
 
 Frontend notes:
 
@@ -166,7 +168,9 @@ All fields are optional.
   "bayName": "BAY 04",
   "soulsOnBoard": 112,
   "actualTime": "2026-05-06T09:42:00.000Z",
-  "delayStatus": "MINOR_DELAY"
+  "boardingTime": "2026-05-06T09:10:00.000Z",
+  "delayStatus": "MINOR_DELAY",
+  "remarks": "Gate change confirmed"
 }
 ```
 
@@ -175,8 +179,10 @@ Accepted fields:
 - `aircraftReg`: optional string.
 - `bayName`: optional string.
 - `soulsOnBoard`: optional number.
-- `actualTime`: optional string.
+- `actualTime`: optional ISO datetime string.
+- `boardingTime`: optional ISO datetime string; stored as `boardingCall` on both the live operation and archive snapshot.
 - `delayStatus`: optional, one of `ON_TIME`, `MINOR_DELAY`, `DELAYED`, `CANCELLED`, `PENDING`.
+- `remarks`: optional free-text string.
 
 Behavior notes:
 
@@ -186,8 +192,9 @@ Behavior notes:
 - The service tries to resolve `airlineId` from the archived row's `airlineCode`.
 - The service tries to resolve `airportId` from the archived row's `airportName`.
 - The archived row's `snapshotDate` is normalized to the Lagos day and used to upsert a live `flightOperation`.
-- If `delayStatus` is `CANCELLED`, `delayMinutes` becomes `null` and the stored delay status becomes `CANCELLED`.
+- If `delayStatus` is `CANCELLED`, `actualTime` is cleared, `delayMinutes` becomes `null`, and the stored delay status becomes `CANCELLED`.
 - For non-cancelled updates, delay values are recalculated from the archived row's `scheduledTime` and the provided `actualTime`.
+- `boardingTime` is persisted as `boardingCall`, and `remarks` is stored on both the live operation and the archive snapshot.
 - After the live flight operation is upserted, the archived row itself is updated with the new editable values and recalculated delay fields.
 
 Success response: `200 OK`
@@ -206,8 +213,10 @@ The current controller returns the upserted live `flightOperation` record, not t
   "soulsOnBoard": 112,
   "scheduledTime": "09:30:00",
   "actualTime": "2026-05-06T09:42:00.000Z",
+  "boardingCall": "2026-05-06T09:10:00.000Z",
   "delayMinutes": 12,
   "delayStatus": "MINOR_DELAY",
+  "remarks": "Gate change confirmed",
   "date": "2026-05-06T00:00:00.000Z",
   "createdById": "clxuser123",
   "createdAt": "2026-05-06T09:10:00.000Z",

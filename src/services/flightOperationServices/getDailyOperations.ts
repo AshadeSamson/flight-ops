@@ -145,6 +145,8 @@ export default async function getDailyOperations(
       soulsOnBoard: operation?.soulsOnBoard || null,
       actualTime: operation?.actualTime || null,
 
+      boardingTime: operation?.boardingCall || null,
+
       aircraftReg:
         operation?.aircraft?.registrationNumber || null,
       aircraftType:

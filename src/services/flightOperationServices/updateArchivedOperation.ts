@@ -12,6 +12,7 @@ type Payload = {
   bayName?: string;
   soulsOnBoard?: number;
   actualTime?: string;
+  boardingTime?: string;
   delayStatus?: string;
   remarks?: string;
 };
@@ -222,6 +223,14 @@ export default async function updateArchivedOperation(
             }
           : {}),
 
+        ...(payload.boardingTime
+          ? {
+              boardingCall: new Date(
+                payload.boardingTime
+              ),
+            }
+          : {}),
+
         delayMinutes:
           calculatedDelayMinutes,
 
@@ -262,6 +271,10 @@ export default async function updateArchivedOperation(
                 payload.actualTime
               )
             : undefined,
+        
+        boardingCall: payload.boardingTime
+          ? new Date(payload.boardingTime)
+          : null,
 
         delayMinutes:
           calculatedDelayMinutes,
@@ -304,6 +317,12 @@ export default async function updateArchivedOperation(
         ...(payload.actualTime && {
           actualTime: new Date(
             payload.actualTime
+          ),
+        }),
+
+        ...(payload.boardingTime && {
+          boardingTime: new Date(
+            payload.boardingTime
           ),
         }),
 

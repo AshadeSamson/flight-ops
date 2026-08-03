@@ -124,6 +124,8 @@ model FlightOperation {
   scheduledTime String // from FIDS or manual
   actualTime    DateTime? // real recorded time
 
+  boardingCall  DateTime?
+
   delayMinutes Int?
   delayStatus  String?
 
@@ -183,6 +185,8 @@ model ArchivedDailyOperation {
   soulsOnBoard Int?
 
   actualTime DateTime?
+
+  boardingCall  DateTime?
 
   aircraftReg String?
   aircraftType String?
