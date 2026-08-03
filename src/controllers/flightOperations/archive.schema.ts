@@ -10,6 +10,8 @@ export const updateArchiveOperationSchema =
 
     actualTime: z.string().optional(),
 
+    boardingTime: z.string().optional(),
+
     delayStatus: z
       .enum([
         "ON_TIME",

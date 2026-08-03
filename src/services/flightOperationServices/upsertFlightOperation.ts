@@ -34,6 +34,7 @@ export default async function upsertFlightOperation(
       soulsOnBoard,
       scheduledTime,
       actualTime,
+      boardingTime,
       delayStatus,
       remarks,
       date,
@@ -269,6 +270,12 @@ export default async function upsertFlightOperation(
               }
             : {}),
 
+          ...(boardingTime && {
+            boardingCall: new Date(
+              boardingTime
+            ),
+          }),
+
           delayMinutes:
             calculatedDelayMinutes,
 
@@ -297,6 +304,10 @@ export default async function upsertFlightOperation(
               : actualTime
               ? new Date(actualTime)
               : undefined,
+
+          boardingCall: boardingTime
+            ? new Date(boardingTime)
+            : null,
 
           delayMinutes:
             calculatedDelayMinutes,
