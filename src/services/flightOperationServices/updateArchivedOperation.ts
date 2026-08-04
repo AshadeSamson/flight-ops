@@ -321,7 +321,7 @@ export default async function updateArchivedOperation(
         }),
 
         ...(payload.boardingTime && {
-          boardingTime: new Date(
+          boardingCall: new Date(
             payload.boardingTime
           ),
         }),
