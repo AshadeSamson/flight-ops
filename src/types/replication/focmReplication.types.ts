@@ -48,6 +48,8 @@ export interface FocmFlightOperationReplicationPayload {
 
 
 export interface FocmFlightOperationUpsertedEvent {
+  eventId: string;
+
   event: "FOCM.FLIGHT_OPERATION_UPSERTED";
 
   version: 1;

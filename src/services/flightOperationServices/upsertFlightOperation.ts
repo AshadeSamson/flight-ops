@@ -342,6 +342,8 @@ export default async function upsertFlightOperation(
     // ✅ Enqueue FOCM replication job
     const replicationEvent:
         FocmFlightOperationUpsertedEvent = {
+        eventId: `focm-${operation.id}-${operation.updatedAt.getTime()}`,
+         
         event: "FOCM.FLIGHT_OPERATION_UPSERTED",
 
         version: 1,

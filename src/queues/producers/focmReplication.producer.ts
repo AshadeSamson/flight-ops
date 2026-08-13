@@ -14,7 +14,7 @@ export async function enqueueFlightOperationReplication(
     FOCM_REPLICATION_JOB.FLIGHT_OPERATION_UPSERTED,
     event,
     {
-      jobId: `focm-flight-operation-${event.data.operationId}`,
+      jobId: event.eventId,
     }
   );
 
