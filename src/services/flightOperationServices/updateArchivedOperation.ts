@@ -131,6 +131,8 @@ export default async function updateArchivedOperation(
     archive.snapshotDate
   );
 
+  const isCancelled = payload.delayStatus === "CANCELLED";
+
   // -----------------------------
   // DELAY CALCULATION
   // -----------------------------
@@ -208,19 +210,17 @@ export default async function updateArchivedOperation(
           airportId,
         }),
 
-        ...(payload.soulsOnBoard !==
-          undefined && {
-          soulsOnBoard:
-            payload.soulsOnBoard,
-        }),
+        ...(isCancelled ? {
+          soulsOnBoard: null,
+        } : 
+          payload.soulsOnBoard !== undefined && {
+            soulsOnBoard: payload.soulsOnBoard,
+          }),
 
-        ...(payload.actualTime
-          ? {
-              actualTime:
-                new Date(
-                  payload.actualTime
-                ),
-            }
+        ...(isCancelled
+          ? { actualTime: null }
+          : payload.actualTime
+          ? { actualTime: new Date(payload.actualTime) }
           : {}),
 
         ...(payload.boardingTime
@@ -263,14 +263,13 @@ export default async function updateArchivedOperation(
         airportId,
 
         soulsOnBoard:
-          payload.soulsOnBoard,
+          isCancelled ? null : payload.soulsOnBoard,
 
-        actualTime:
-          payload.actualTime
-            ? new Date(
-                payload.actualTime
-              )
-            : undefined,
+        actualTime: isCancelled
+          ? null
+          : payload.actualTime
+          ? new Date(payload.actualTime)
+          : undefined,
         
         boardingCall: payload.boardingTime
           ? new Date(payload.boardingTime)
@@ -308,17 +307,18 @@ export default async function updateArchivedOperation(
           bayName: payload.bayName,
         }),
 
-        ...(payload.soulsOnBoard !==
-          undefined && {
-          soulsOnBoard:
-            payload.soulsOnBoard,
-        }),
+        ...(isCancelled ? {
+          soulsOnBoard: null,
+        } : 
+          payload.soulsOnBoard !== undefined && {
+            soulsOnBoard: payload.soulsOnBoard,
+          }),
 
-        ...(payload.actualTime && {
-          actualTime: new Date(
-            payload.actualTime
-          ),
-        }),
+        ...(isCancelled
+          ? { actualTime: null }
+          : payload.actualTime
+          ? { actualTime: new Date(payload.actualTime) }
+          : {}),
 
         ...(payload.boardingTime && {
           boardingCall: new Date(

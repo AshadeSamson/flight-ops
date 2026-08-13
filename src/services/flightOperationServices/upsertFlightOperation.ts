@@ -254,7 +254,10 @@ export default async function upsertFlightOperation(
           ...(airportId && { airportId }),
           ...(bayId && { bayId }),
 
-          ...(soulsOnBoard !== undefined && {
+          ...(isCancelled ? {
+            soulsOnBoard: null,
+          } :
+            soulsOnBoard !== undefined && {
             soulsOnBoard,
           }),
 
@@ -301,7 +304,7 @@ export default async function upsertFlightOperation(
           airportId,
           bayId,
 
-          soulsOnBoard,
+          soulsOnBoard: isCancelled ? null : soulsOnBoard,
 
           scheduledTime:
             resolvedScheduledTime,

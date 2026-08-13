@@ -45,7 +45,7 @@ export const updateFlightOperationSchema = z.object({
   airportCode: z.string().optional(),
   airportName: z.string().optional(),
 
-  soulsOnBoard: z.number().int().positive().optional(),
+  soulsOnBoard: z.number().int().positive().nullable().optional(),
 
   scheduledTime: timeStringSchema.optional(),
 
