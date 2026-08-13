@@ -8,6 +8,14 @@ import {
 } from "../../utils/flightMetrics";
 import { getLagosDateRange } from "../../utils/lagosDate";
 import createAuditLog from "../auditServices/createAuditLog";
+import {
+  enqueueFlightOperationReplication,
+} from "../../queues/producers/focmReplication.producer";
+import {
+  FocmFlightOperationUpsertedEvent,
+} from "../../types/replication/focmReplication.types";
+
+
 
 export default async function upsertFlightOperation(
   req: Request,
@@ -319,7 +327,91 @@ export default async function upsertFlightOperation(
 
           createdById: user?.id,
         },
+
+        include: {
+          aircraft: true,
+          airline: true,
+          airport: true,
+        },
       });
+
+
+    // ✅ Enqueue FOCM replication job
+    const replicationEvent:
+        FocmFlightOperationUpsertedEvent = {
+        event: "FOCM.FLIGHT_OPERATION_UPSERTED",
+
+        version: 1,
+
+        occurredAt: new Date().toISOString(),
+
+        data: {
+          operationId: operation.id,
+
+          flightNumber: operation.flightNumber,
+
+          movementType: operation.movementType,
+
+          date: operation.date.toISOString(),
+
+          airline: operation.airline
+            ? {
+                code: operation.airline.code,
+                name: operation.airline.name,
+              }
+            : null,
+
+          aircraft: operation.aircraft
+            ? {
+                registrationNumber:
+                  operation.aircraft.registrationNumber,
+
+                type: operation.aircraft.type,
+
+                maxCapacity:
+                  operation.aircraft.maxCapacity,
+              }
+            : null,
+
+          airport: operation.airport
+            ? {
+                code: operation.airport.code,
+                name: operation.airport.name,
+              }
+            : null,
+
+          soulsOnBoard:
+            operation.soulsOnBoard,
+
+          scheduledTime:
+            operation.scheduledTime,
+
+          actualTime:
+            operation.actualTime
+              ? operation.actualTime.toISOString()
+              : null,
+
+          boardingCall:
+            operation.boardingCall
+              ? operation.boardingCall.toISOString()
+              : null,
+
+          delayMinutes:
+            operation.delayMinutes,
+
+          delayStatus:
+            operation.delayStatus,
+
+          remarks:
+            operation.remarks,
+
+          createdAt:
+            operation.createdAt.toISOString(),
+
+          updatedAt:
+            operation.updatedAt.toISOString(),
+        },
+      };
 
         // ✅ Non-blocking Audit Log
     createAuditLog({
@@ -373,11 +465,31 @@ export default async function upsertFlightOperation(
         );
       });
 
-    return res.status(200).json({
+    // console.log(
+    //   "FOCM replication event:",
+    //   JSON.stringify(
+    //     replicationEvent,
+    //     null,
+    //     2
+    //   )
+    // );
+
+    res.status(200).json({
       message:
         "Flight operation upserted successfully",
       data: operation,
     });
+
+    // ✅ Enqueue replication job
+    enqueueFlightOperationReplication(
+      replicationEvent
+    ).catch((error) => {
+      console.error(
+        "FOCM → IFIC replication enqueue failed:",
+        error
+      );
+    });
+    
   } catch (error) {
     console.error(error);
 

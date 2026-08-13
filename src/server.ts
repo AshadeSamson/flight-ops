@@ -2,6 +2,8 @@ import app from "./app";
 import dotenv from "dotenv";
 import { connectToDB } from "./config/db";
 import http from "http";
+import "./config/redis";
+// import { testFocmReplicationQueue } from "./queues/focmReplication.queue";
 
 
 dotenv.config();
@@ -10,6 +12,13 @@ const PORT = process.env.PORT || 3000;
 async function startServer() {
 
     await connectToDB()
+
+    // testFocmReplicationQueue().catch((error) => {
+    //     console.error(
+    //         "BullMQ test failed:",
+    //         error
+    //     );
+    // });
 
 
     const server = http.createServer(app);
