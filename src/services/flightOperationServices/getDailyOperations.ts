@@ -135,6 +135,7 @@ export default async function getDailyOperations(
 
     return {
       scheduleId: flight.id,
+      date: flight.date,
       flightNumber: flight.flightNumber,
       airlineCode: flight.airlineCode,
       airportName: flight.airportName,
