@@ -41,5 +41,8 @@ export default async function createAircraft(
       maxCapacity: Number(body.maxCapacity),
       airlineId: airline.id,
     },
+    include: {
+      airline: true,
+    },
   });
 }

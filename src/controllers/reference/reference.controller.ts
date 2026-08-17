@@ -15,6 +15,10 @@ import deleteBay from "../../services/referenceServices/deleteBay";
 import createAirport from "../../services/referenceServices/createAirport";
 import updateAirport from "../../services/referenceServices/updateAirport";
 import deleteAirport from "../../services/referenceServices/deleteAirport";
+import { AircraftReplicationEvent } from "../../types/replication/masterDataReplication.types";
+import enqueueAircraftReplication from "../../services/replication/enqueueAircraftReplication";
+import { AirportReplicationEvent } from "../../types/replication/masterDataReplication.types";
+import enqueueAirportReplication from "../../services/replication/enqueueAirportReplication";
 
 
 export async function getAircraftsHandler(req: Request, res: Response) {
@@ -98,6 +102,45 @@ export async function createAircraftHandler(
 ) {
   const data = await createAircraft(req.body);
 
+  const replicationEvent: AircraftReplicationEvent = {
+    eventId: `focm-aircraft-${data.id}-${data.updatedAt.getTime()}`,
+
+    event: "FOCM.AIRCRAFT_UPSERTED",
+
+    version: 1,
+
+    occurredAt: new Date().toISOString(),
+
+    data: {
+      aircraftId: data.id,
+
+      registrationNumber:
+        data.registrationNumber,
+
+      type: data.type,
+
+      maxCapacity:
+        data.maxCapacity,
+
+      airline: {
+        code: data.airline.code,
+        name: data.airline.name,
+      },
+
+      updatedAt:
+        data.updatedAt.toISOString(),
+    },
+  };
+
+  enqueueAircraftReplication(
+    replicationEvent
+  ).catch((error) => {
+    console.error(
+      "FOCM → IFIC aircraft replication enqueue failed:",
+      error
+    );
+  });
+
   return res.status(201).json({
     message: "Aircraft created successfully",
     data,
@@ -112,6 +155,45 @@ export async function updateAircraftHandler(
     String(req.params.id),
     req.body
   );
+
+  const replicationEvent: AircraftReplicationEvent = {
+    eventId: `focm-aircraft-${data.id}-${data.updatedAt.getTime()}`,
+
+    event: "FOCM.AIRCRAFT_UPSERTED",
+
+    version: 1,
+
+    occurredAt: new Date().toISOString(),
+
+    data: {
+      aircraftId: data.id,
+
+      registrationNumber:
+        data.registrationNumber,
+
+      type: data.type,
+
+      maxCapacity:
+        data.maxCapacity,
+
+      airline: {
+        code: data.airline.code,
+        name: data.airline.name,
+      },
+
+      updatedAt:
+        data.updatedAt.toISOString(),
+    },
+  };
+
+  enqueueAircraftReplication(
+    replicationEvent
+  ).catch((error) => {
+    console.error(
+      "FOCM → IFIC aircraft replication enqueue failed:",
+      error
+    );
+  });
 
   return res.status(200).json({
     message: "Aircraft updated successfully",
@@ -176,6 +258,36 @@ export async function createAirportHandler(
 ) {
   const data = await createAirport(req.body);
 
+  const replicationEvent: AirportReplicationEvent = {
+    eventId: `focm-airport-${data.id}-${data.updatedAt.getTime()}`,
+
+    event: "FOCM.AIRPORT_UPSERTED",
+
+    version: 1,
+
+    occurredAt: new Date().toISOString(),
+
+    data: {
+      airportId: data.id,
+
+      code: data.code,
+
+      name: data.name,
+
+      updatedAt:
+        data.updatedAt.toISOString(),
+    },
+  };
+
+  enqueueAirportReplication(
+    replicationEvent
+  ).catch((error) => {
+    console.error(
+      "FOCM → IFIC airport replication enqueue failed:",
+      error
+    );
+  });
+
   return res.status(201).json({
     message: "Airport created successfully",
     data,
@@ -190,6 +302,36 @@ export async function updateAirportHandler(
     String(req.params.id),
     req.body
   );
+
+  const replicationEvent: AirportReplicationEvent = {
+    eventId: `focm-airport-${data.id}-${data.updatedAt.getTime()}`,
+
+    event: "FOCM.AIRPORT_UPSERTED",
+
+    version: 1,
+
+    occurredAt: new Date().toISOString(),
+
+    data: {
+      airportId: data.id,
+
+      code: data.code,
+
+      name: data.name,
+
+      updatedAt:
+        data.updatedAt.toISOString(),
+    },
+  };
+
+  enqueueAirportReplication(
+    replicationEvent
+  ).catch((error) => {
+    console.error(
+      "FOCM → IFIC airport replication enqueue failed:",
+      error
+    );
+  });
 
   return res.status(200).json({
     message: "Airport updated successfully",
