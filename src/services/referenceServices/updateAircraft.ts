@@ -66,10 +66,13 @@ export default async function updateAircraft(
       ...(body.type && {
         type: body.type.trim(),
       }),
-      ...(body.maxCapacity && {
-        maxCapacity: Number(body.maxCapacity),
+      ...(body.maxCapacity !== undefined && {
+      maxCapacity: Number(body.maxCapacity),
       }),
       ...(airlineId && { airlineId }),
+    },
+    include: {
+      airline: true,
     },
   });
 }

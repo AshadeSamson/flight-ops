@@ -1,11 +1,12 @@
 import { prisma } from "../../config/prisma";
-
 import {
   buildScheduledDateTime,
   calculateDelayMinutes,
   getDelayStatus,
 } from "../../utils/flightMetrics";
 import { getLagosDayAnchor } from "../../utils/lagosDate";
+import { FocmFlightOperationUpsertedEvent } from "../../types/replication/focmReplication.types";
+import { enqueueFlightOperationReplication } from "../../queues/producers/focmReplication.producer";
 
 type Payload = {
   aircraftReg?: string;
@@ -285,6 +286,12 @@ export default async function updateArchivedOperation(
 
         createdById: userId,
       },
+
+      include: {
+          aircraft: true,
+          airline: true,
+          airport: true,
+      },
     });
 
   // -----------------------------
@@ -338,6 +345,113 @@ export default async function updateArchivedOperation(
       },
     }
   );
+
+
+  // -----------------------------
+  // ENQUEUE REPLICATION EVENT
+  // -----------------------------
+
+    const replicationEvent:
+      FocmFlightOperationUpsertedEvent = {
+      eventId:
+        `focm-${operation.id}-${operation.updatedAt.getTime()}`,
+
+      event:
+        "FOCM.FLIGHT_OPERATION_UPSERTED",
+
+      version: 1,
+
+      occurredAt:
+        new Date().toISOString(),
+
+      data: {
+        operationId:
+          operation.id,
+
+        flightNumber:
+          operation.flightNumber,
+
+        movementType:
+          operation.movementType,
+
+        date:
+          operation.date.toISOString(),
+
+        airline: operation.airline
+          ? {
+              code:
+                operation.airline.code,
+
+              name:
+                operation.airline.name,
+            }
+          : null,
+
+        aircraft: operation.aircraft
+          ? {
+              registrationNumber:
+                operation.aircraft
+                  .registrationNumber,
+
+              type:
+                operation.aircraft.type,
+
+              maxCapacity:
+                operation.aircraft.maxCapacity,
+            }
+          : null,
+
+        airport: operation.airport
+          ? {
+              code:
+                operation.airport.code,
+
+              name:
+                operation.airport.name,
+            }
+          : null,
+
+        soulsOnBoard:
+          operation.soulsOnBoard,
+
+        scheduledTime:
+          operation.scheduledTime,
+
+        actualTime:
+          operation.actualTime
+            ? operation.actualTime.toISOString()
+            : null,
+
+        boardingCall:
+          operation.boardingCall
+            ? operation.boardingCall.toISOString()
+            : null,
+
+        delayMinutes:
+          operation.delayMinutes,
+
+        delayStatus:
+          operation.delayStatus,
+
+        remarks:
+          operation.remarks,
+
+        createdAt:
+          operation.createdAt.toISOString(),
+
+        updatedAt:
+          operation.updatedAt.toISOString(),
+      },
+    };
+
+    enqueueFlightOperationReplication(
+      replicationEvent
+    ).catch((error) => {
+      console.error(
+        "FOCM → IFIC replication enqueue failed:",
+        error
+      );
+    });
 
   return operation;
 }

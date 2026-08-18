@@ -119,6 +119,7 @@ Success response: `200 OK`
   "data": [
     {
       "scheduleId": "clxsch123",
+      "date":"2026-05-07T09:10:00.000Z",
       "flightNumber": "P47123",
       "airlineCode": "P4",
       "airportName": "Lagos",
