@@ -14,11 +14,11 @@ import {
 const router = Router();
 
 
-router.get( "/daily", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(getDailyOperationsHandler));
-router.patch( "/upsert", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(upsertFlightOperationHandler));
-router.get( "/schedule", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(getFlightFromScheduleHandler));
-router.post( "/", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(createFlightOperationHandler));
-router.get("/history", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(getFlightOperationsHistoryHandler));
+router.get( "/daily", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF", "OPS_PERSONNEL"), asyncHandler(getDailyOperationsHandler));
+router.patch( "/upsert", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF", "OPS_PERSONNEL"), asyncHandler(upsertFlightOperationHandler));
+router.get( "/schedule", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF", "OPS_PERSONNEL"), asyncHandler(getFlightFromScheduleHandler));
+router.post( "/", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF", "OPS_PERSONNEL"), asyncHandler(createFlightOperationHandler));
+router.get("/history", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF", "OPS_PERSONNEL"), asyncHandler(getFlightOperationsHistoryHandler));
 
 
 export default router;

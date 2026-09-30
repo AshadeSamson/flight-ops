@@ -7,7 +7,7 @@ import requireAuth from "../middleware/requireAuth";
 
 const router = Router();
 
-router.get("/", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(controller.list));
-router.put("/:id", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF"), asyncHandler(controller.update));
+router.get("/", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF", "OPS_PERSONNEL"), asyncHandler(controller.list));
+router.put("/:id", requireAuth, requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF", "OPS_PERSONNEL"), asyncHandler(controller.update));
 
 export default router;
