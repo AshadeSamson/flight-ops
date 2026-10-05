@@ -1,40 +1,55 @@
 # Audit API Documentation
 
 ## Overview
-The Audit API provides endpoints for retrieving audit logs of system operations. Audit logs track all significant actions performed in the system, including who performed the action, what was done, and when it occurred.
+The audit API exposes the system action log for monitoring user activity and operational changes. The current backend mount is:
 
----
+```text
+/api/v1/audit-logs
+```
 
-## Endpoints
+## Authentication and access
 
-### Get Audit Logs
-Retrieve paginated audit logs with optional filtering capabilities.
+All audit endpoints require:
 
-**Endpoint:** `GET /audit`
+```http
+Authorization: Bearer <access_token>
+```
 
-**Authentication:** Required  
-**Authorization:** Requires `ADMIN` or `SUPERVISOR` role
+Allowed roles:
 
-**Query Parameters:**
+- `ADMIN`
+- `SUPERVISOR`
+
+This matches the route setup in `src/routes/audit.route.ts`.
+
+## Endpoint
+
+### `GET /api/v1/audit-logs`
+
+Retrieves paginated audit logs with optional filtering.
+
+Query parameters:
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `page` | number | 1 | Page number for pagination |
-| `limit` | number | 20 | Number of records per page |
-| `module` | string | - | Filter logs by module (e.g., USER, FLIGHT_OPERATION) |
-| `action` | string | - | Filter logs by action type (e.g., CREATE, UPDATE, DELETE) |
-| `userId` | string | - | Filter logs by user ID |
-| `startDate` | string | - | Start date for date range filter (format: YYYY-MM-DD) |
-| `endDate` | string | - | End date for date range filter (format: YYYY-MM-DD) |
-| `search` | string | - | Search in description field (case-insensitive) |
+| --- | --- | --- | --- |
+| `page` | number | `1` | Page number |
+| `limit` | number | `20` | Records per page |
+| `module` | string | - | Filter logs by module |
+| `action` | string | - | Filter logs by action type |
+| `userId` | string | - | Filter by user ID |
+| `startDate` | string | - | Start date in `YYYY-MM-DD` |
+| `endDate` | string | - | End date in `YYYY-MM-DD` |
+| `search` | string | - | Search text in log description |
 
-**Request Example:**
+Example:
+
 ```http
-GET /audit?page=1&limit=20&module=USER&action=CREATE&startDate=2026-05-01&endDate=2026-05-08
+GET /api/v1/audit-logs?page=1&limit=20&module=USER&action=CREATE&startDate=2026-05-01&endDate=2026-05-08
 Authorization: Bearer <token>
 ```
 
-**Response (200 OK):**
+Success response: `200 OK`
+
 ```json
 {
   "message": "Audit logs retrieved successfully",
@@ -63,40 +78,15 @@ Authorization: Bearer <token>
 }
 ```
 
-**Response Fields:**
-- `message` - Success message
-- `data` - Array of audit log records
-  - `id` - Unique identifier for the audit log
-  - `module` - Module where the action was performed
-  - `action` - Type of action performed
-  - `description` - Detailed description of the action
-  - `userId` - ID of the user who performed the action
-  - `createdAt` - Timestamp when the action was performed
-  - `user` - User object containing user details
-    - `id` - User ID
-    - `name` - User's full name
-    - `email` - User's email address
-    - `role` - User's role (ADMIN, SUPERVISOR, etc.)
-- `meta` - Pagination metadata
-  - `total` - Total number of audit logs matching filters
-  - `page` - Current page number
-  - `limit` - Records per page
-  - `totalPages` - Total number of pages
+## Common error responses
 
-**Error Responses:**
+- `401 Unauthorized`: missing or invalid token.
+- `403 Forbidden`: user does not have `ADMIN` or `SUPERVISOR` access.
+- `400 Bad Request`: invalid query input.
 
-| Status | Error | Description |
-|--------|-------|-------------|
-| 401 | Unauthorized | Authentication token is missing or invalid |
-| 403 | Forbidden | User does not have ADMIN or SUPERVISOR role |
-| 400 | Bad Request | Invalid query parameters |
+## Notes
 
----
+- Audit records are associated with the actor via `userId` and nested `user` data.
+- `module` and `action` are free-form strings in the stored logs, so UI filtering should be tolerant of the values used by the service.
+- The route currently excludes `OPS_STAFF` and `OPS_PERSONNEL` from audit access.
 
-## Common Use Cases
-
-1. **Track user actions:** Filter by `userId` to see all actions performed by a specific user
-2. **Monitor specific modules:** Use `module` filter to focus on specific features (e.g., flight operations)
-3. **Date range analysis:** Use `startDate` and `endDate` for compliance reporting
-4. **Search functionality:** Use `search` parameter to find logs mentioning specific text
-5. **Pagination:** Combine `page` and `limit` for efficient data retrieval in large datasets

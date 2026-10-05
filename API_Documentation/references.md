@@ -1,6 +1,6 @@
 # Reference Data API Documentation
 
-This document covers the reference endpoints used for lookup data and admin CRUD management of airlines, aircrafts, bays, and airports.
+This document covers the lookup and admin CRUD endpoints for the master reference tables: airlines, aircrafts, bays, and airports.
 
 Base path:
 
@@ -8,7 +8,7 @@ Base path:
 /api/v1/ref
 ```
 
-## Authentication and Access
+## Authentication and access
 
 All reference endpoints require:
 
@@ -16,196 +16,48 @@ All reference endpoints require:
 Authorization: Bearer <access_token>
 ```
 
-Access rules:
+Current access rules as implemented in the routes:
 
 - `GET` endpoints: any authenticated user.
-- `POST`, `PATCH`, and `DELETE` endpoints: `ADMIN` only.
+- `POST`, `PATCH`, and `DELETE` for `airlines`, `bays`, and `airports`: `ADMIN` only.
+- `POST`, `PATCH`, and `DELETE` for `aircrafts`: `ADMIN`, `SUPERVISOR`, `OPS_STAFF`.
+- `OPS_PERSONNEL` is not listed on any mutation route under `/api/v1/ref`.
 
-Common auth-related errors:
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized"
-}
-```
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized: Invalid token"
-}
-```
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized: No user information found"
-}
-```
-
-- `403 Forbidden`
-
-```json
-{
-  "message": "Forbidden: Insufficient permissions"
-}
-```
-
-- `404 Not Found`
-
-```json
-{
-  "message": "User does not exist"
-}
-```
-
-## Error Handling Note
-
-The new create, update, and delete reference services currently throw plain `Error` objects. Those are caught by the global error handler and returned as `500 Internal Server Error`, even for business cases like duplicate values, missing records, or records currently in use.
-
-Current global error response shape for thrown service errors:
-
-```json
-{
-  "success": false,
-  "message": "Airline code already exists",
-  "statusCode": 500,
-  "path": "/api/v1/ref/airlines",
-  "timestamp": "2026-04-16T12:00:00.000Z"
-}
-```
-
-Frontend note:
-
-- For now, treat these `500` responses as business-rule failures when the message is descriptive, for example `Airline not found`, `Bay code already exists`, or `Cannot delete airport currently in use`.
-
-## Lookup Endpoints
+## Lookup endpoints
 
 ### `GET /api/v1/ref/aircrafts`
 
-Returns all aircraft reference records ordered by registration number.
+Returns all aircraft records ordered by registration number.
 
 Auth:
 
 - Any authenticated user.
-
-Request body:
-
-- None
-
-Success response: `200 OK`
-
-```json
-{
-  "message": "Aircrafts retrieved successfully",
-  "data": [
-    {
-      "id": "clxair123",
-      "registrationNumber": "5N-BXX",
-      "type": "B737",
-      "maxCapacity": 140,
-      "airlineCode": "Q9",
-      "airlineName": "Green Africa"
-    }
-  ]
-}
-```
-
-Frontend notes:
-
-- Use `registrationNumber` for `aircraftReg` values sent to flight operation endpoints.
-- `type` is display-friendly, but flight operation mapping currently uses `registrationNumber`.
 
 ### `GET /api/v1/ref/bays`
 
-Returns all bay reference records ordered by name.
+Returns all bay records ordered by name.
 
 Auth:
 
 - Any authenticated user.
-
-Request body:
-
-- None
-
-Success response: `200 OK`
-
-```json
-{
-  "message": "Bays retrieved successfully",
-  "data": [
-    {
-      "id": "clxbay123",
-      "name": "BAY 04",
-      "code": "B04"
-    }
-  ]
-}
-```
-
-Frontend notes:
-
-- Use `name` for `bayName` values sent to flight operation endpoints.
 
 ### `GET /api/v1/ref/airports`
 
-Returns all airport reference records ordered by name.
+Returns all airport records ordered by name.
 
 Auth:
 
 - Any authenticated user.
-
-Request body:
-
-- None
-
-Success response: `200 OK`
-
-```json
-{
-  "message": "Airports retrieved successfully",
-  "data": [
-    {
-      "id": "clxapt123",
-      "name": "Murtala Muhammed International Airport",
-      "code": "LOS"
-    }
-  ]
-}
-```
 
 ### `GET /api/v1/ref/airlines`
 
-Returns all airline reference records ordered by name.
+Returns all airline records ordered by name.
 
 Auth:
 
 - Any authenticated user.
 
-Request body:
-
-- None
-
-Success response: `200 OK`
-
-```json
-{
-  "message": "Airlines retrieved successfully",
-  "data": [
-    {
-      "id": "clxairline123",
-      "name": "Green Africa",
-      "code": "Q9"
-    }
-  ]
-}
-```
-
-## Airline Admin Endpoints
+## Admin mutation endpoints
 
 ### `POST /api/v1/ref/airlines`
 
@@ -215,40 +67,6 @@ Auth:
 
 - `ADMIN` only.
 
-Request body:
-
-```json
-{
-  "name": "Green Africa",
-  "code": "Q9"
-}
-```
-
-Behavior notes:
-
-- `name` is trimmed.
-- `code` is trimmed and converted to uppercase.
-- Duplicate `code` values are rejected.
-
-Success response: `201 Created`
-
-```json
-{
-  "message": "Airline created successfully",
-  "data": {
-    "id": "clxairline123",
-    "name": "Green Africa",
-    "code": "Q9",
-    "createdAt": "2026-04-16T09:00:00.000Z",
-    "updatedAt": "2026-04-16T09:00:00.000Z"
-  }
-}
-```
-
-Possible business-rule error messages returned through the global error handler:
-
-- `Airline code already exists`
-
 ### `PATCH /api/v1/ref/airlines/:id`
 
 Updates an airline.
@@ -256,47 +74,6 @@ Updates an airline.
 Auth:
 
 - `ADMIN` only.
-
-Path params:
-
-- `id`: airline ID.
-
-Request body:
-
-All fields are optional.
-
-```json
-{
-  "name": "Green Africa Airways",
-  "code": "Q9"
-}
-```
-
-Behavior notes:
-
-- `name` is trimmed when provided.
-- `code` is trimmed and converted to uppercase when provided.
-- The backend checks that no other airline already uses the new code.
-
-Success response: `200 OK`
-
-```json
-{
-  "message": "Airline updated successfully",
-  "data": {
-    "id": "clxairline123",
-    "name": "Green Africa Airways",
-    "code": "Q9",
-    "createdAt": "2026-04-16T09:00:00.000Z",
-    "updatedAt": "2026-04-16T10:00:00.000Z"
-  }
-}
-```
-
-Possible business-rule error messages returned through the global error handler:
-
-- `Airline not found`
-- `Another airline already uses this code`
 
 ### `DELETE /api/v1/ref/airlines/:id`
 
@@ -306,77 +83,13 @@ Auth:
 
 - `ADMIN` only.
 
-Path params:
-
-- `id`: airline ID.
-
-Request body:
-
-- None
-
-Success response: `200 OK`
-
-```json
-{
-  "message": "Airline deleted successfully"
-}
-```
-
-Possible business-rule error messages returned through the global error handler:
-
-- `Airline not found`
-- `Cannot delete airline currently in use`
-
-## Aircraft Admin Endpoints
-
 ### `POST /api/v1/ref/aircrafts`
 
-Creates a new aircraft.
+Creates an aircraft.
 
 Auth:
 
-- `ADMIN` only.
-
-Request body:
-
-```json
-{
-  "registrationNumber": "5N-BXX",
-  "type": "B737",
-  "maxCapacity": 140,
-  "airlineCode": "Q9"
-}
-```
-
-Behavior notes:
-
-- `registrationNumber` is trimmed and converted to uppercase.
-- `type` is trimmed.
-- `airlineCode` is trimmed and converted to uppercase.
-- `airlineCode` must already exist in the airline table.
-- Duplicate aircraft registration numbers are rejected.
-
-Success response: `201 Created`
-
-```json
-{
-  "message": "Aircraft created successfully",
-  "data": {
-    "id": "clxair123",
-    "registrationNumber": "5N-BXX",
-    "type": "B737",
-    "maxCapacity": 140,
-    "airlineId": "clxairline123",
-    "createdAt": "2026-04-16T09:00:00.000Z",
-    "updatedAt": "2026-04-16T09:00:00.000Z"
-  }
-}
-```
-
-Possible business-rule error messages returned through the global error handler:
-
-- `Airline not found`
-- `Aircraft registration already exists`
+- `ADMIN`, `SUPERVISOR`, `OPS_STAFF`
 
 ### `PATCH /api/v1/ref/aircrafts/:id`
 
@@ -384,55 +97,7 @@ Updates an aircraft.
 
 Auth:
 
-- `ADMIN` only.
-
-Path params:
-
-- `id`: aircraft ID.
-
-Request body:
-
-All fields are optional.
-
-```json
-{
-  "registrationNumber": "5N-BXY",
-  "type": "B737-800",
-  "maxCapacity": 150,
-  "airlineCode": "Q9"
-}
-```
-
-Behavior notes:
-
-- `registrationNumber` is trimmed and uppercased when provided.
-- `type` is trimmed when provided.
-- `maxCapacity` is converted with `Number(...)`.
-- `airlineCode` must exist if provided.
-- The backend rejects a registration number already used by another aircraft.
-
-Success response: `200 OK`
-
-```json
-{
-  "message": "Aircraft updated successfully",
-  "data": {
-    "id": "clxair123",
-    "registrationNumber": "5N-BXY",
-    "type": "B737-800",
-    "maxCapacity": 150,
-    "airlineId": "clxairline123",
-    "createdAt": "2026-04-16T09:00:00.000Z",
-    "updatedAt": "2026-04-16T10:00:00.000Z"
-  }
-}
-```
-
-Possible business-rule error messages returned through the global error handler:
-
-- `Aircraft not found`
-- `Airline not found`
-- `Another aircraft already uses this registration`
+- `ADMIN`, `SUPERVISOR`, `OPS_STAFF`
 
 ### `DELETE /api/v1/ref/aircrafts/:id`
 
@@ -440,13 +105,72 @@ Deletes an aircraft.
 
 Auth:
 
+- `ADMIN`, `SUPERVISOR`, `OPS_STAFF`
+
+### `POST /api/v1/ref/bays`
+
+Creates a bay.
+
+Auth:
+
 - `ADMIN` only.
 
-Path params:
+### `PATCH /api/v1/ref/bays/:id`
 
-- `id`: aircraft ID.
+Updates a bay.
 
-Request body:
+Auth:
+
+- `ADMIN` only.
+
+### `DELETE /api/v1/ref/bays/:id`
+
+Deletes a bay.
+
+Auth:
+
+- `ADMIN` only.
+
+### `POST /api/v1/ref/airports`
+
+Creates an airport.
+
+Auth:
+
+- `ADMIN` only.
+
+### `PATCH /api/v1/ref/airports/:id`
+
+Updates an airport.
+
+Auth:
+
+- `ADMIN` only.
+
+### `DELETE /api/v1/ref/airports/:id`
+
+Deletes an airport.
+
+Auth:
+
+- `ADMIN` only.
+
+## Error handling note
+
+The reference mutation services currently throw plain `Error` objects, which are caught by the global error handler and returned as `500 Internal Server Error` for business-rule cases such as duplicate values, missing records, and delete conflicts.
+
+Frontend note:
+
+- When a mutation fails with a descriptive message, treat the returned `message` as the business-rule reason even when the HTTP status is `500`.
+
+## Role policy summary
+
+| Ref resource | Read access | Update access |
+| --- | --- | --- |
+| Airlines | any authenticated user | `ADMIN` |
+| Aircrafts | any authenticated user | `ADMIN`, `SUPERVISOR`, `OPS_STAFF` |
+| Bays | any authenticated user | `ADMIN` |
+| Airports | any authenticated user | `ADMIN` |
 
 - None
 
