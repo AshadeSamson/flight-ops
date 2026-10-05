@@ -10,6 +10,24 @@ Base path:
 /api/v1
 ```
 
+## Current role model
+
+The backend enforces access with exact role allow-lists in each route. The active roles in the current Prisma model are:
+
+| Role | Current access scope |
+| --- | --- |
+| `ADMIN` | Full system access; manages users and all admin CRUD endpoints |
+| `SUPERVISOR` | Operational oversight; can manage operations, reference maintenance, and dashboards |
+| `OPS_STAFF` | Operational staff; can edit daily operations and aircraft reference records |
+| `OPS_PERSONNEL` | Field/operations personnel; can read and update flight operations, archives, and dashboard data |
+
+Important implementation notes:
+
+- `requireRole` checks the user's JWT `role` against the specific allow-list on each route.
+- There is no inherited hierarchy; a route must explicitly list every role allowed for that endpoint.
+- The Prisma enum includes `OPS_PERSONNEL`, and the operation routes also allow it.
+- The user validation schema in `src/controllers/users/user.schema.ts` now accepts the same active role set as the Prisma model: `ADMIN`, `SUPERVISOR`, `OPS_STAFF`, and `OPS_PERSONNEL`.
+
 ## Authentication Overview
 
 Protected endpoints require:
@@ -22,9 +40,9 @@ Access token notes:
 
 - Returned by `POST /api/v1/auth/login`.
 - JWT expires in `12h`.
-- `GET /api/v1/auth/me` is the main session-rehydration endpoint for the frontend.
-- User management endpoints other than `GET /api/v1/users/profile` are restricted to `ADMIN`.
-- Dashboard summary is restricted to `ADMIN` and `SUPERVISOR`.
+- `GET /api/v1/auth/me` is the session rehydration endpoint for the frontend.
+- User management endpoints (`/api/v1/users`) are restricted to `ADMIN`.
+- Dashboard, flight operations, and archive endpoints include `OPS_PERSONNEL` in their allowed roles where the code explicitly lists it.
 
 ## Common Error Shapes
 
@@ -33,6 +51,14 @@ Access token notes:
 ```json
 {
   "message": "Unauthorized"
+}
+```
+
+### Permission error
+
+```json
+{
+  "message": "Forbidden: Insufficient permissions"
 }
 ```
 
@@ -48,19 +74,6 @@ Access token notes:
         "Invalid email"
       ]
     }
-  }
-}
-```
-
-### Validation error with field errors only
-
-```json
-{
-  "message": "Invalid input data",
-  "errors": {
-    "password": [
-      "String must contain at least 8 character(s)"
-    ]
   }
 }
 ```
@@ -82,8 +95,8 @@ Request body:
 
 Validation rules:
 
-- `email`: required, must be a valid email.
-- `password`: required, must not be empty.
+- `email`: required, valid email.
+- `password`: required, non-empty.
 
 Success response: `200 OK`
 
@@ -140,7 +153,7 @@ Possible error responses:
 
 ### `POST /api/v1/auth/forgot-password`
 
-Triggers password reset email flow.
+Triggers the password-reset email flow.
 
 Request body:
 
@@ -150,13 +163,7 @@ Request body:
 }
 ```
 
-Validation rules:
-
-- `email`: required, must be a valid email.
-
 Success response: `200 OK`
-
-This endpoint always returns the same success message whether the account exists or not.
 
 ```json
 {
@@ -164,32 +171,9 @@ This endpoint always returns the same success message whether the account exists
 }
 ```
 
-Possible error responses:
-
-- `400 Bad Request`
-
-```json
-{
-  "message": "Invalid request"
-}
-```
-
-- `500 Internal Server Error`
-
-```json
-{
-  "message": "Internal server error"
-}
-```
-
-Frontend note:
-
-- The reset email contains a link like `/reset-password?token=<jwt_token>`.
-- The frontend reset-password page should extract the `token` from the query string and send it to the password reset endpoint.
-
 ### `POST /api/v1/auth/password-reset`
 
-Resets a password using the token from the reset email.
+Resets a password using the token returned in the email.
 
 Request body:
 
@@ -203,7 +187,7 @@ Request body:
 Validation rules:
 
 - `token`: required string.
-- `password`: required, minimum length `8`.
+- `password`: required, minimum `8` characters.
 
 Success response: `200 OK`
 
@@ -213,60 +197,14 @@ Success response: `200 OK`
 }
 ```
 
-Possible error responses:
-
-- `400 Bad Request`
-
-```json
-{
-  "message": "Invalid request"
-}
-```
-
-- `400 Bad Request`
-
-```json
-{
-  "message": "Invalid or expired token"
-}
-```
-
-- `400 Bad Request`
-
-```json
-{
-  "message": "Invalid token"
-}
-```
-
-- `404 Not Found`
-
-```json
-{
-  "message": "User not found"
-}
-```
-
-- `500 Internal Server Error`
-
-```json
-{
-  "message": "Internal server error"
-}
-```
-
 ### `GET /api/v1/auth/me`
 
 Returns the currently authenticated user from the auth middleware context.
 
 Auth:
 
-- Requires `Authorization: Bearer <access_token>`.
+- Requires a valid bearer token.
 - Any authenticated user can access this route.
-
-Request body:
-
-- None
 
 Success response: `200 OK`
 
@@ -277,40 +215,9 @@ Success response: `200 OK`
     "id": "clx123456789",
     "role": "ADMIN",
     "email": "admin@example.com",
-    "name": "John Doe"
+    "name": "John Doe",
+    "staffId": "BASL/ID/12345678"
   }
-}
-```
-
-Frontend notes:
-
-- Use this endpoint to restore the logged-in user after app refresh.
-- The current implementation returns `id`, `role`, `email`, and `name`.
-- It does not currently return `staffId`.
-
-Possible error responses:
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized"
-}
-```
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized: Invalid token"
-}
-```
-
-- `404 Not Found`
-
-```json
-{
-  "message": "User does not exist"
 }
 ```
 
@@ -318,16 +225,12 @@ Possible error responses:
 
 ### `GET /api/v1/users/profile`
 
-Returns the current authenticated user's profile.
+Returns the currently authenticated user's profile.
 
 Auth:
 
-- Requires `Authorization: Bearer <access_token>`.
-- Any authenticated user can access this route.
-
-Request body:
-
-- None
+- Requires a valid bearer token.
+- Any authenticated user can access it.
 
 Success response: `200 OK`
 
@@ -336,46 +239,8 @@ Success response: `200 OK`
   "id": "clx123456789",
   "email": "admin@example.com",
   "name": "John Doe",
-  "role": "ADMIN"
-}
-```
-
-Frontend note:
-
-- The service attempts to return `staffId`, but the current auth middleware does not attach `staffId` to `req.user`.
-- Treat `staffId` on this endpoint as unreliable or absent unless the backend middleware is updated.
-
-Possible error responses:
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized"
-}
-```
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized: Invalid token"
-}
-```
-
-- `404 Not Found`
-
-```json
-{
-  "message": "User does not exist"
-}
-```
-
-- `500 Internal Server Error`
-
-```json
-{
-  "message": "Internal server error"
+  "role": "ADMIN",
+  "staffId": "BASL/ID/12345678"
 }
 ```
 
@@ -385,7 +250,7 @@ Creates a new user.
 
 Auth:
 
-- Requires `Authorization: Bearer <access_token>`.
+- Requires a valid bearer token.
 - Requires `ADMIN`.
 
 Request body:
@@ -402,16 +267,16 @@ Request body:
 
 Validation rules:
 
-- `name`: required, minimum length `3`.
+- `name`: required, minimum `3` characters.
 - `email`: required, valid email.
-- `password`: required, minimum length `8`.
-- `role`: required, one of `ADMIN`, `SUPERVISOR`, `OPS_STAFF`.
-- `staffId`: required, must match `BASL/ID/########` with 8 to 10 digits.
+- `password`: required, minimum `8` characters.
+- `role`: required; validated as `ADMIN`, `SUPERVISOR`, `OPS_STAFF`, or `OPS_PERSONNEL` by `user.schema.ts`.
+- `staffId`: required; must match `BASL/ID/########` with 8 to 10 digits.
 
 Normalization:
 
-- `email` is saved in lowercase.
-- `staffId` is saved in uppercase.
+- `email` is stored lowercase.
+- `staffId` is stored uppercase.
 
 Success response: `201 Created`
 
@@ -430,53 +295,9 @@ Success response: `201 Created`
 
 Possible error responses:
 
-- `400 Bad Request`
-
-```json
-{
-  "message": "Invalid request body",
-  "errors": {
-    "formErrors": [],
-    "fieldErrors": {
-      "staffId": [
-        "Invalid staff ID"
-      ]
-    }
-  }
-}
-```
-
-- `409 Conflict`
-
-```json
-{
-  "message": "Email is already in use!"
-}
-```
-
-- `409 Conflict`
-
-```json
-{
-  "message": "Staff ID already exists"
-}
-```
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized"
-}
-```
-
-- `403 Forbidden`
-
-```json
-{
-  "message": "Forbidden: Insufficient permissions"
-}
-```
+- `409 Conflict` for duplicate email.
+- `409 Conflict` for duplicate staff ID.
+- `403 Forbidden` for insufficient permissions.
 
 ### `GET /api/v1/users`
 
@@ -484,54 +305,12 @@ Returns a paginated list of users.
 
 Auth:
 
-- Requires `Authorization: Bearer <access_token>`.
 - Requires `ADMIN`.
 
-Query parameters:
+Query params:
 
 - `page`: optional, default `1`.
-- `limit`: optional, default `10`, maximum `50`.
-
-Success response: `200 OK`
-
-```json
-{
-  "users": [
-    {
-      "id": "clx123456789",
-      "name": "Jane Doe",
-      "email": "jane@example.com",
-      "role": "SUPERVISOR",
-      "staffId": "BASL/ID/12345678",
-      "createdAt": "2026-04-10T12:00:00.000Z"
-    }
-  ],
-  "meta": {
-    "total": 1,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 1
-  }
-}
-```
-
-Possible error responses:
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized"
-}
-```
-
-- `403 Forbidden`
-
-```json
-{
-  "message": "Forbidden: Insufficient permissions"
-}
-```
+- `limit`: optional, default `10`.
 
 ### `GET /api/v1/users/:id`
 
@@ -539,61 +318,7 @@ Returns one user by ID.
 
 Auth:
 
-- Requires `Authorization: Bearer <access_token>`.
 - Requires `ADMIN`.
-
-Path params:
-
-- `id`: user ID.
-
-Success response: `200 OK`
-
-```json
-{
-  "user": {
-    "id": "clx123456789",
-    "name": "Jane Doe",
-    "email": "jane@example.com",
-    "role": "SUPERVISOR",
-    "staffId": "BASL/ID/12345678",
-    "createdAt": "2026-04-10T12:00:00.000Z"
-  }
-}
-```
-
-Possible error responses:
-
-- `400 Bad Request`
-
-```json
-{
-  "message": "User ID is required"
-}
-```
-
-- `404 Not Found`
-
-```json
-{
-  "message": "User not found"
-}
-```
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized"
-}
-```
-
-- `403 Forbidden`
-
-```json
-{
-  "message": "Forbidden: Insufficient permissions"
-}
-```
 
 ### `PATCH /api/v1/users/:id`
 
@@ -601,235 +326,37 @@ Partially updates a user.
 
 Auth:
 
-- Requires `Authorization: Bearer <access_token>`.
 - Requires `ADMIN`.
-
-Path params:
-
-- `id`: user ID.
-
-Request body:
-
-```json
-{
-  "name": "Jane Smith",
-  "email": "janesmith@example.com",
-  "password": "newpassword123",
-  "role": "ADMIN",
-  "staffId": "BASL/ID/12345679"
-}
-```
 
 All fields are optional.
 
-Validation rules:
+Validation notes:
 
-- `name`: optional, minimum length `3`.
-- `email`: optional, valid email.
-- `password`: optional, minimum length `8`.
-- `role`: optional, one of `ADMIN`, `SUPERVISOR`, `OPS_STAFF`.
-- `staffId`: optional, must match `BASL/ID/########` with 8 to 10 digits.
-
-Success response: `200 OK`
-
-```json
-{
-  "message": "User updated successfully",
-  "user": {
-    "id": "clx123456789",
-    "name": "Jane Smith",
-    "email": "janesmith@example.com",
-    "role": "ADMIN",
-    "staffId": "BASL/ID/12345679"
-  }
-}
-```
-
-Possible error responses:
-
-- `400 Bad Request`
-
-```json
-{
-  "message": "Invalid input data",
-  "errors": {
-    "password": [
-      "String must contain at least 8 character(s)"
-    ]
-  }
-}
-```
-
-- `404 Not Found`
-
-```json
-{
-  "message": "User not found"
-}
-```
-
-- `409 Conflict`
-
-```json
-{
-  "message": "Email is already in use"
-}
-```
-
-- `409 Conflict`
-
-```json
-{
-  "message": "Staff ID already exists"
-}
-```
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized"
-}
-```
-
-- `403 Forbidden`
-
-```json
-{
-  "message": "Forbidden: Insufficient permissions"
-}
-```
+- `role` is validated as `ADMIN`, `SUPERVISOR`, `OPS_STAFF`, or `OPS_PERSONNEL` by the current schema.
+- `email` and `staffId` are normalized before the uniqueness checks.
 
 ## Dashboard Endpoints
 
 ### `GET /api/v1/dashboard/today-summary`
 
-Returns dashboard summary data for the current Lagos day and the latest archived snapshot.
+Returns the current Lagos-day summary and the latest archive snapshot summary.
 
 Auth:
 
-- Requires `Authorization: Bearer <access_token>`.
-- Requires `ADMIN` or `SUPERVISOR`.
+- Requires a valid bearer token.
+- Allowed roles: `ADMIN`, `SUPERVISOR`, `OPS_STAFF`, `OPS_PERSONNEL`.
 
-Request body:
+This endpoint is explicitly protected by `requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF", "OPS_PERSONNEL")`.
 
-- None
+## Route access summary at a glance
 
-Success response: `200 OK`
-
-```json
-{
-  "message": "Dashboard summary retrieved successfully",
-  "data": {
-    "currentDay": {
-      "totalScheduled": 48,
-      "completed": 31,
-      "pending": 17,
-      "delayed": 6,
-      "arrivals": 24,
-      "departures": 24,
-      "statusBreakdown": {
-        "onTime": 18,
-        "minorDelay": 7,
-        "delayed": 6,
-        "cancelled": 2
-      },
-      "airlineBreakdown": [
-        {
-          "airlineCode": "P4",
-          "totalFlights": 10,
-          "arrivals": 6,
-          "departures": 4
-        },
-        {
-          "airlineCode": "UNKNOWN",
-          "totalFlights": 3,
-          "arrivals": 2,
-          "departures": 1
-        }
-      ]
-    },
-    "archiveDay": {
-      "totalScheduled": 45,
-      "completed": 28,
-      "pending": 17,
-      "delayed": 5,
-      "arrivals": 22,
-      "departures": 23,
-      "statusBreakdown": {
-        "onTime": 17,
-        "minorDelay": 6,
-        "delayed": 5,
-        "cancelled": 1
-      },
-      "airlineBreakdown": [
-        {
-          "airlineCode": "P4",
-          "totalFlights": 9,
-          "arrivals": 5,
-          "departures": 4
-        }
-      ]
-    }
-  }
-}
-```
-
-Response field notes:
-
-- `currentDay` is built from today's `dailyFlightSchedule` rows merged with matching live operations.
-- `archiveDay` is built from the current contents of `archivedDailyOperation`.
-- Each day block contains:
-- `totalScheduled`, `completed`, `pending`, `delayed`, `arrivals`, and `departures`
-- `statusBreakdown`: `onTime`, `minorDelay`, `delayed`, `cancelled`
-- `airlineBreakdown`: grouped by `airlineCode` with `totalFlights`, `arrivals`, and `departures`
-- Missing airline codes are grouped under `UNKNOWN`.
-
-Frontend notes:
-
-- This endpoint does not take query parameters.
-- It uses the server's current Lagos day.
-- `archiveDay` reflects the latest archived snapshot, not a multi-day history.
-
-Possible error responses:
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized"
-}
-```
-
-- `401 Unauthorized`
-
-```json
-{
-  "message": "Unauthorized: Invalid token"
-}
-```
-
-- `403 Forbidden`
-
-```json
-{
-  "message": "Forbidden: Insufficient permissions"
-}
-```
-
-- `404 Not Found`
-
-```json
-{
-  "message": "User does not exist"
-}
-```
-
-## Frontend Integration Notes
-
-- Store the login `token` and send it as a Bearer token on protected requests.
-- Use `GET /api/v1/auth/me` to rehydrate the current user session on app load.
-- `forgot-password` should always show a neutral success state even when the email does not exist.
-- `password-reset` requires the token from the reset link query string.
-- Role values are exactly `ADMIN`, `SUPERVISOR`, and `OPS_STAFF`.
-- `staffId` format is `BASL/ID/12345678` with 8 to 10 digits after the final slash.
+| Route group | Allowed roles |
+| --- | --- |
+| `/api/v1/auth/*` | any authenticated user |
+| `/api/v1/users/*` | `ADMIN` |
+| `/api/v1/dashboard/*` | `ADMIN`, `SUPERVISOR`, `OPS_STAFF`, `OPS_PERSONNEL` |
+| `/api/v1/flight-operations/*` | `ADMIN`, `SUPERVISOR`, `OPS_STAFF`, `OPS_PERSONNEL` |
+| `/api/v1/archive-operations/*` | `ADMIN`, `SUPERVISOR`, `OPS_STAFF`, `OPS_PERSONNEL` |
+| `/api/v1/operations/sync-day/*` | `ADMIN`, `SUPERVISOR`, `OPS_STAFF` |
+| `/api/v1/audit-logs/*` | `ADMIN`, `SUPERVISOR` |
+| `/api/v1/ref/*` | any authenticated user for GET, `ADMIN` for mutation routes |
