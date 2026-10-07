@@ -73,7 +73,9 @@ Success response: `200 OK`
     "total": 150,
     "page": 1,
     "limit": 20,
-    "totalPages": 8
+    "totalPages": 8,
+    "hasNextPage": true,
+    "hasPrevPage": false
   }
 }
 ```
@@ -82,11 +84,13 @@ Success response: `200 OK`
 
 - `401 Unauthorized`: missing or invalid token.
 - `403 Forbidden`: user does not have `ADMIN` or `SUPERVISOR` access.
-- `400 Bad Request`: invalid query input.
+- Invalid date query values are not validated by the endpoint and may reach the global error handler as `500 Internal Server Error`.
 
 ## Notes
 
 - Audit records are associated with the actor via `userId` and nested `user` data.
+- Date filtering is applied only when both `startDate` and `endDate` are supplied; both use `YYYY-MM-DD` and are interpreted as Lagos calendar dates.
+- Each returned audit record may also include `entityType`, `entityId`, `metadata`, `ipAddress`, and `userAgent` when those values were recorded.
+- Current operation-related actions include `UPSERT_OPERATION`, `CANCEL_OPERATION`, `UPDATE_ARCHIVED_OPERATION`, `CANCEL_ARCHIVED_OPERATION`, `ARCHIVE_DAILY_FLIGHTS_OPERATIONS`, and `REFRESH_DAILY_FLIGHTS`. Flight operation actions use module `FLIGHT_OPERATIONS`; FIDS trigger actions use module `FIDS`.
 - `module` and `action` are free-form strings in the stored logs, so UI filtering should be tolerant of the values used by the service.
 - The route currently excludes `OPS_STAFF` and `OPS_PERSONNEL` from audit access.
-

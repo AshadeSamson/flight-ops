@@ -41,8 +41,9 @@ Access token notes:
 - Returned by `POST /api/v1/auth/login`.
 - JWT expires in `12h`.
 - `GET /api/v1/auth/me` is the session rehydration endpoint for the frontend.
-- User management endpoints (`/api/v1/users`) are restricted to `ADMIN`.
+- User management endpoints under `/api/v1/users` are restricted to `ADMIN`, except `/api/v1/users/profile`, which is available to any authenticated user.
 - Dashboard, flight operations, and archive endpoints include `OPS_PERSONNEL` in their allowed roles where the code explicitly lists it.
+- Auth routes are limited to 10 requests per 15-minute window per IP. Other `/api/v1` routes are limited to 500 requests per 15-minute window per IP. A rate-limit response is `429 Too Many Requests`.
 
 ## Common Error Shapes
 
@@ -77,6 +78,20 @@ Access token notes:
   }
 }
 ```
+
+Errors passed to the global error handler use this envelope (and include `errors` when provided):
+
+```json
+{
+  "success": false,
+  "message": "Internal server error",
+  "statusCode": 500,
+  "path": "/api/v1/example",
+  "timestamp": "2026-05-08T10:30:00.000Z"
+}
+```
+
+The login handler returns flattened Zod validation errors; the forgot-password and password-reset handlers return `{ "message": "Invalid request" }` for invalid bodies.
 
 ## Auth Endpoints
 
@@ -215,8 +230,7 @@ Success response: `200 OK`
     "id": "clx123456789",
     "role": "ADMIN",
     "email": "admin@example.com",
-    "name": "John Doe",
-    "staffId": "BASL/ID/12345678"
+    "name": "John Doe"
   }
 }
 ```
@@ -239,8 +253,7 @@ Success response: `200 OK`
   "id": "clx123456789",
   "email": "admin@example.com",
   "name": "John Doe",
-  "role": "ADMIN",
-  "staffId": "BASL/ID/12345678"
+  "role": "ADMIN"
 }
 ```
 
@@ -311,6 +324,30 @@ Query params:
 
 - `page`: optional, default `1`.
 - `limit`: optional, default `10`.
+- `limit` is capped at `50`.
+
+Success response:
+
+```json
+{
+  "users": [
+    {
+      "id": "clx123456789",
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "role": "SUPERVISOR",
+      "staffId": "BASL/ID/12345678",
+      "createdAt": "2026-05-07T09:10:00.000Z"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 1
+  }
+}
+```
 
 ### `GET /api/v1/users/:id`
 
@@ -319,6 +356,7 @@ Returns one user by ID.
 Auth:
 
 - Requires `ADMIN`.
+- Success response is `{ "user": { ... } }`; returns `404` with `"User not found"` when the ID does not identify an active user.
 
 ### `PATCH /api/v1/users/:id`
 
@@ -334,12 +372,13 @@ Validation notes:
 
 - `role` is validated as `ADMIN`, `SUPERVISOR`, `OPS_STAFF`, or `OPS_PERSONNEL` by the current schema.
 - `email` and `staffId` are normalized before the uniqueness checks.
+- Success response is `{ "message": "User updated successfully", "user": { ... } }`; missing active users return `404`, and duplicate email/staff ID values return `409`.
 
 ## Dashboard Endpoints
 
 ### `GET /api/v1/dashboard/today-summary`
 
-Returns the current Lagos-day summary and the latest archive snapshot summary.
+Returns the current Lagos-day summary and a summary of the archived operation rows.
 
 Auth:
 
@@ -348,15 +387,19 @@ Auth:
 
 This endpoint is explicitly protected by `requireRole("ADMIN", "SUPERVISOR", "OPS_STAFF", "OPS_PERSONNEL")`.
 
+Success response is `{ "message": "Dashboard summary retrieved successfully", "data": { "currentDay": { ... }, "archiveDay": { ... } } }`. `currentDay` summarizes the current Lagos-day schedule with live operation details; `archiveDay` summarizes archived rows.
+
 ## Route access summary at a glance
 
 | Route group | Allowed roles |
 | --- | --- |
-| `/api/v1/auth/*` | any authenticated user |
-| `/api/v1/users/*` | `ADMIN` |
+| `/api/v1/auth/login`, `/forgot-password`, `/password-reset` | public, rate-limited |
+| `/api/v1/auth/me` | any authenticated user |
+| `/api/v1/users/profile` | any authenticated user |
+| Other `/api/v1/users/*` routes | `ADMIN` |
 | `/api/v1/dashboard/*` | `ADMIN`, `SUPERVISOR`, `OPS_STAFF`, `OPS_PERSONNEL` |
 | `/api/v1/flight-operations/*` | `ADMIN`, `SUPERVISOR`, `OPS_STAFF`, `OPS_PERSONNEL` |
 | `/api/v1/archive-operations/*` | `ADMIN`, `SUPERVISOR`, `OPS_STAFF`, `OPS_PERSONNEL` |
 | `/api/v1/operations/sync-day/*` | `ADMIN`, `SUPERVISOR`, `OPS_STAFF` |
 | `/api/v1/audit-logs/*` | `ADMIN`, `SUPERVISOR` |
-| `/api/v1/ref/*` | any authenticated user for GET, `ADMIN` for mutation routes |
+| `/api/v1/ref/*` | any authenticated user for GET; `ADMIN` for airline/bay/airport mutations; `ADMIN`, `SUPERVISOR`, `OPS_STAFF` for aircraft mutations |
