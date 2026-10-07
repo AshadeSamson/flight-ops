@@ -42,7 +42,7 @@ Success response: `200 OK`
 
 ```json
 {
-  "message": "Operations synced successfully"
+  "message": "Operations archived successfully"
 }
 ```
 
@@ -50,7 +50,7 @@ Important notes:
 
 - This endpoint is a trigger endpoint, not a fetch endpoint.
 - It can replace the active archive snapshot, since it calls `createArchiveSnapshot` before refreshing the live table.
-- If the FIDS source returns no flights, the service exits early and still returns success.
+- If the FIDS source returns no flights, the service exits early without changing the schedule or archive and the endpoint still returns success.
 
 ### `POST /api/v1/operations/sync-day/refresh`
 
@@ -60,7 +60,7 @@ Success response: `200 OK`
 
 ```json
 {
-  "message": "Daily operations refreshed successfully"
+  "message": "Daily operations synced successfully"
 }
 ```
 
@@ -70,10 +70,19 @@ Important notes:
 - It does not create or replace the archive snapshot.
 - It is intended for a schedule-only update when the current archive copy should remain untouched.
 
+## Audit logging
+
+Both triggers create a non-blocking audit log entry in module `FIDS` with the triggering user's ID, IP address, and user agent when available:
+
+| Endpoint | Action |
+| --- | --- |
+| `POST /api/v1/operations/sync-day` | `ARCHIVE_DAILY_FLIGHTS_OPERATIONS` |
+| `POST /api/v1/operations/sync-day/refresh` | `REFRESH_DAILY_FLIGHTS` |
+
 ## Related flow notes
 
 - After either sync endpoint succeeds, `/api/v1/flight-operations/daily` reads from the refreshed `dailyFlightSchedule` table.
-- `POST /api/v1/operations/sync-day` updates the live schedule and also replaces the latest archive snapshot.
+- When FIDS returns flights and an existing schedule is present, `POST /api/v1/operations/sync-day` replaces the archive snapshot before updating the live schedule.
 - `POST /api/v1/operations/sync-day/refresh` updates only the live schedule and leaves the current archive snapshot as-is.
 
 ## Common errors
@@ -81,4 +90,4 @@ Important notes:
 - `401 Unauthorized`: missing or invalid token.
 - `403 Forbidden`: insufficient permissions.
 - `500 Internal Server Error`: internal sync failure or datasource issue.
-
+- The general API limiter allows up to 500 requests per 15-minute window per IP; a rejected request returns `429 Too Many Requests`.

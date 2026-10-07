@@ -35,6 +35,12 @@ Query params:
 
 - `page`: optional, default `1`
 - `limit`: optional, default `20`
+- `limit=all` returns all matching records.
+- `movementType`: optional, `ARRIVAL` or `DEPARTURE`
+- `airlineCode`: optional airline-code filter
+- `search`: optional, matches flight number, airport name, aircraft registration, or bay name
+- `status`: optional, `ON_TIME`, `MINOR_DELAY`, `DELAYED`, `PENDING`, or `CANCELLED`
+- `startDate` and `endDate`: optional `YYYY-MM-DD` range; date filtering is applied only when both are supplied.
 
 Example:
 
@@ -55,6 +61,8 @@ Key rules:
 - For other statuses, delay values are recalculated from the archived `scheduledTime` and the provided `actualTime`.
 - `boardingTime` is stored as `boardingCall` on both the live operation and archive record.
 - `remarks` are mirrored to the live operation and the archive snapshot.
+- Cancelling also clears `soulsOnBoard`. Non-cancelled updates recalculate delay values from the archived scheduled time and supplied actual time; without an actual time the result is `PENDING`.
+- Successful corrections write a non-blocking audit record (`UPDATE_ARCHIVED_OPERATION` or `CANCEL_ARCHIVED_OPERATION`, module `FLIGHT_OPERATIONS`) and enqueue a flight-operation replication event.
 
 Request body example:
 
@@ -107,10 +115,13 @@ The archive update service does not convert every business failure into a custom
 
 Possible validation or service error messages:
 
+- `Invalid input data` (400, with flattened field errors)
 - `Missing archive id`
 - `Archived operation not found`
 - `Aircraft not found`
 - `Bay not found`
+
+The service-level errors above are handled by the global error handler and normally return `500` with the global error envelope; schema validation returns `400`.
 
 Frontend notes:
 

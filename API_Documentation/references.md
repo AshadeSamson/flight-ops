@@ -22,6 +22,7 @@ Current access rules as implemented in the routes:
 - `POST`, `PATCH`, and `DELETE` for `airlines`, `bays`, and `airports`: `ADMIN` only.
 - `POST`, `PATCH`, and `DELETE` for `aircrafts`: `ADMIN`, `SUPERVISOR`, `OPS_STAFF`.
 - `OPS_PERSONNEL` is not listed on any mutation route under `/api/v1/ref`.
+- Successful aircraft and airport creates/updates also enqueue non-blocking replication events; the API response does not wait for downstream replication.
 
 ## Lookup endpoints
 
@@ -107,6 +108,23 @@ Auth:
 
 - `ADMIN`, `SUPERVISOR`, `OPS_STAFF`
 
+Request body:
+
+- None
+
+Success response: `200 OK`
+
+```json
+{
+  "message": "Aircraft deleted successfully"
+}
+```
+
+Possible business-rule error messages returned through the global error handler:
+
+- `Aircraft not found`
+- `Cannot delete aircraft currently in use`
+
 ### `POST /api/v1/ref/bays`
 
 Creates a bay.
@@ -157,35 +175,21 @@ Auth:
 
 ## Error handling note
 
-The reference mutation services currently throw plain `Error` objects, which are caught by the global error handler and returned as `500 Internal Server Error` for business-rule cases such as duplicate values, missing records, and delete conflicts.
+The reference mutation services currently throw plain `Error` objects for business-rule failures such as duplicate values, missing records, and delete conflicts. The global handler returns `500 Internal Server Error` with the standard envelope (`success`, `message`, `statusCode`, `path`, `timestamp`).
 
 Frontend note:
 
 - When a mutation fails with a descriptive message, treat the returned `message` as the business-rule reason even when the HTTP status is `500`.
+- The general API rate limit is 500 requests per 15-minute window per IP; rate-limit responses use `429 Too Many Requests`.
 
 ## Role policy summary
 
-| Ref resource | Read access | Update access |
+| Ref resource | Read access | Mutation access |
 | --- | --- | --- |
 | Airlines | any authenticated user | `ADMIN` |
 | Aircrafts | any authenticated user | `ADMIN`, `SUPERVISOR`, `OPS_STAFF` |
 | Bays | any authenticated user | `ADMIN` |
 | Airports | any authenticated user | `ADMIN` |
-
-- None
-
-Success response: `200 OK`
-
-```json
-{
-  "message": "Aircraft deleted successfully"
-}
-```
-
-Possible business-rule error messages returned through the global error handler:
-
-- `Aircraft not found`
-- `Cannot delete aircraft currently in use`
 
 ## Bay Admin Endpoints
 
