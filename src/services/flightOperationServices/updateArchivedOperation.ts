@@ -7,6 +7,7 @@ import {
 import { getLagosDayAnchor } from "../../utils/lagosDate";
 import { FocmFlightOperationUpsertedEvent } from "../../types/replication/focmReplication.types";
 import { enqueueFlightOperationReplication } from "../../queues/producers/focmReplication.producer";
+import createAuditLog from "../auditServices/createAuditLog";
 
 type Payload = {
   aircraftReg?: string;
@@ -18,10 +19,16 @@ type Payload = {
   remarks?: string;
 };
 
+type AuditContext = {
+  ipAddress?: string;
+  userAgent?: string | string[];
+};
+
 export default async function updateArchivedOperation(
   archiveId: string,
   payload: Payload,
-  userId: string
+  userId: string,
+  auditContext: AuditContext = {}
 ) {
   const archive =
     await prisma.archivedDailyOperation.findUnique(
@@ -443,6 +450,79 @@ export default async function updateArchivedOperation(
           operation.updatedAt.toISOString(),
       },
     };
+
+    // Non-blocking audit log
+    createAuditLog({
+      userId,
+
+      action:
+        calculatedDelayStatus === "CANCELLED"
+          ? "CANCEL_ARCHIVED_OPERATION"
+          : "UPDATE_ARCHIVED_OPERATION",
+
+      module: "FLIGHT_OPERATIONS",
+
+      description:
+        calculatedDelayStatus === "CANCELLED"
+          ? `Cancelled archived flight ${archive.flightNumber}`
+          : `Updated archived flight ${archive.flightNumber}`,
+
+      entityType: "FlightOperation",
+
+      entityId: operation.id,
+
+      metadata: {
+        archiveId,
+
+        flightNumber:
+          archive.flightNumber,
+
+        movementType:
+          archive.movementType,
+
+        airlineCode:
+          archive.airlineCode,
+
+        airportName:
+          archive.airportName,
+
+        aircraftReg:
+          payload.aircraftReg ??
+          archive.aircraftReg,
+
+        bayName:
+          payload.bayName ??
+          archive.bayName,
+
+        soulsOnBoard:
+          operation.soulsOnBoard,
+
+        delayStatus:
+          calculatedDelayStatus,
+
+        delayMinutes:
+          calculatedDelayMinutes,
+
+        remarks:
+          payload.remarks ??
+          archive.remarks ??
+          null,
+      },
+
+      ipAddress:
+        auditContext.ipAddress,
+
+      userAgent: Array.isArray(
+        auditContext.userAgent
+      )
+        ? auditContext.userAgent.join(", ")
+        : auditContext.userAgent,
+    }).catch((error) => {
+      console.error(
+        "Audit log failed:",
+        error
+      );
+    });
 
     enqueueFlightOperationReplication(
       replicationEvent

@@ -84,7 +84,13 @@ export const update = async (
     await updateArchivedOperation(
       archiveId,
       parsed,
-      userId
+      userId,
+      {
+        ipAddress: req.ip,
+
+        userAgent:
+          req.headers["user-agent"],
+      }
     );
 
   res.json(result);

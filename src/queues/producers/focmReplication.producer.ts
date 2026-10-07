@@ -18,9 +18,9 @@ export async function enqueueFlightOperationReplication(
     }
   );
 
-  console.log(
-    `FOCM → IFIC replication queued: ${job.id} (${event.data.operationId})`
-  );
+  // console.log(
+  //   `FOCM → IFIC replication queued: ${job.id} (${event.data.operationId})`
+  // );
 
   return job;
 }
