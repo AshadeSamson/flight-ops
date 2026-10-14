@@ -23,7 +23,7 @@ export function calculateDelayMinutes(
 
   const diffMs = actual.getTime() - scheduled.getTime();
 
-  return Math.round(diffMs / (1000 * 60)); // minutes
+  return Math.max(0, Math.round(diffMs / (1000 * 60))); // minutes
 }
 
 
@@ -32,7 +32,7 @@ export function getDelayStatus(delay: number | null) {
 
   if (delay <= 5) return "ON_TIME";
 
-  if (delay > 5 && delay <= 20) return "MINOR_DELAY";
+  if (delay > 5 && delay <= 15) return "MINOR_DELAY";
 
   return "DELAYED";
 }
