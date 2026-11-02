@@ -33,6 +33,10 @@ export default async function createFlightOperation(
 
     const startOfDay = getLagosDayAnchor(date);
 
+    const schedule = await prisma.dailyFlightSchedule.findFirst({
+      where: { flightNumber, movementType, date: startOfDay },
+    });
+
     // 🔄 Map Aircraft (reg → id)
     let aircraftId: string | undefined;
 
@@ -79,6 +83,7 @@ export default async function createFlightOperation(
       data: {
         flightNumber,
         movementType,
+        type: schedule?.type ?? null,
 
         aircraftId,
         bayId,

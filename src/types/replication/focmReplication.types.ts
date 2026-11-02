@@ -9,6 +9,8 @@ export interface FocmFlightOperationReplicationPayload {
 
   movementType: FocmMovementType;
 
+  type: string | null;
+
   date: string;
 
   airline: {

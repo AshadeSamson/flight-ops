@@ -108,6 +108,8 @@ model FlightOperation {
 
   movementType MovementType
 
+  type String?
+
   airlineId String?
   airline   Airline? @relation(fields: [airlineId], references: [id])
 
@@ -152,6 +154,8 @@ model DailyFlightSchedule {
 
   movementType MovementType
 
+  type String?
+
   airportCode String?
   airportName String
 
@@ -175,6 +179,8 @@ model ArchivedDailyOperation {
   flightNumber String
 
   movementType MovementType
+
+  type String?
 
   airlineCode String?
   airportName String
