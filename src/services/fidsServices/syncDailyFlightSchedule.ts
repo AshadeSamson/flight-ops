@@ -35,6 +35,8 @@ export default async function syncDailyFlightSchedule() {
 
         movementType: flight.movementType,
 
+        type: flight.type ?? null,
+
         airportCode: flight.airportCode,
         airportName: flight.airportName,
 

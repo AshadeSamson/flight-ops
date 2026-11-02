@@ -28,6 +28,7 @@ export default async function getFlightFromSchedule(
     flightNumber: flight.flightNumber,
     airlineCode: flight.airlineCode,
     airportName: flight.airportName,
+    type: flight.type,
     scheduledTime: flight.scheduledTime,
     status: flight.status,
   };

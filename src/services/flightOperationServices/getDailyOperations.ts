@@ -141,6 +141,7 @@ export default async function getDailyOperations(
       airportName: flight.airportName,
       scheduledTime: flight.scheduledTime,
       movementType: flight.movementType,
+      type: flight.type,
 
       operationId: operation?.id || null,
       soulsOnBoard: operation?.soulsOnBoard || null,

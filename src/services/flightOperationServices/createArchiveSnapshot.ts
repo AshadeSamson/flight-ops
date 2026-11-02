@@ -96,6 +96,8 @@ export default async function createArchiveSnapshot() {
         movementType:
           flight.movementType,
 
+        type: flight.type,
+
         airlineCode:
           flight.airlineCode,
 

@@ -6,6 +6,7 @@ type RawFidsFlight = {
   airport?: string;
   scheduledTime?: string;
   status?: string;
+  type?: string;
   movementType?: "ARRIVAL" | "DEPARTURE";
 };
 
@@ -18,7 +19,7 @@ type NormalizedFlight = {
 
   scheduledTime: string;
   status?: string;
-
+  type?: string;
   movementType: "ARRIVAL" | "DEPARTURE";
 
   date: Date;
@@ -50,6 +51,10 @@ export default function normalizeFidsData(
         flight.scheduledTime || ""
       ).trim();
 
+      const type = String(
+        flight.type || "" 
+      ).trim();
+
       const movementType =
         flight.movementType === "ARRIVAL"
           ? "ARRIVAL"
@@ -72,6 +77,8 @@ export default function normalizeFidsData(
         status: flight.status
           ? String(flight.status).trim()
           : undefined,
+
+        type: type || undefined,
 
         movementType,
 

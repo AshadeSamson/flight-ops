@@ -292,11 +292,14 @@ export default async function upsertFlightOperation(
 
           delayStatus:
             calculatedDelayStatus,
+
+          ...(schedule && { type: schedule.type }),
         },
 
         create: {
           flightNumber,
           movementType,
+          type: schedule?.type ?? null,
           date: startOfDay,
 
           aircraftId,
@@ -356,6 +359,8 @@ export default async function upsertFlightOperation(
           flightNumber: operation.flightNumber,
 
           movementType: operation.movementType,
+
+          type: operation.type,
 
           date: operation.date.toISOString(),
 

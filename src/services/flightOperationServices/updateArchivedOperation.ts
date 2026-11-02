@@ -245,6 +245,8 @@ export default async function updateArchivedOperation(
         delayStatus:
           calculatedDelayStatus,
 
+        type: archive.type,
+
         ...(payload.remarks && {
           remarks: payload.remarks,
         }),
@@ -261,6 +263,8 @@ export default async function updateArchivedOperation(
 
         scheduledTime:
           archive.scheduledTime,
+
+        type: archive.type,
 
         aircraftId,
 
@@ -380,6 +384,8 @@ export default async function updateArchivedOperation(
 
         movementType:
           operation.movementType,
+
+        type: operation.type,
 
         date:
           operation.date.toISOString(),
